@@ -1,0 +1,1 @@
+html,body{color:#fff;background:#000;height:100%;margin:0;overflow:hidden}body{flex-direction:column;font:14px/1.4 monospace;display:flex}#game-container{flex:1;min-height:0}#game-container canvas{image-rendering:pixelated;display:block}#help{text-align:center;margin:8px 16px}

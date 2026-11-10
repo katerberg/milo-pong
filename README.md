@@ -2,6 +2,10 @@
 
 A tiny, 1-bit, keyboard-controlled take on the 1972 Atari Pong, built with [Phaser](https://phaser.io), TypeScript and Vite.
 
+## Start screen
+
+The title, ball, paddles and button box on the start screen come from a hand drawing. They live as PNGs in `src/assets/start`, and their positions are in `src/game/scenes/startLayout.ts`. The "Start" label uses the Gochi Hand font.
+
 ## Development
 
 Requires Node 26 (see `.nvmrc`).

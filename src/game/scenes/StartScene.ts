@@ -1,53 +1,51 @@
 import Phaser from "phaser";
-import { H, W } from "../sim/pong";
+import buttonUrl from "../../assets/start/button.png";
+import dotUrl from "../../assets/start/dot.png";
+import paddleLeftUrl from "../../assets/start/paddle-left.png";
+import paddleRightUrl from "../../assets/start/paddle-right.png";
+import wordUrl from "../../assets/start/word.png";
+import { setHelpVisible } from "../help";
+import { DRAWING, PIECES } from "./startLayout";
 
 export const TITLE_BG = 0x2458bf;
-const WHITE = 0xffffff;
-const BLACK = 0x000000;
+export const START_FONT = '"Gochi Hand", cursive';
 
-// "ping" on a 9-row grid: rows 0-1 are empty, 2-6 the x-height, 7-8 descenders.
-// The i's dot is the ball, bouncing one row above the grid so the paddles clear the letters.
-const TITLE: string[][] = [
-  ["", "", "11110", "10001", "10001", "10001", "11110", "10000", "10000"],
-  ["", "", "1", "1", "1", "1", "1", "", ""],
-  ["", "", "11110", "10001", "10001", "10001", "10001", "", ""],
-  ["", "", "01111", "10001", "10001", "10001", "01111", "00001", "01110"],
-];
-const CELL = 7;
-const I_INDEX = 1;
-
-const SMALL: Record<string, string[]> = {
-  S: ["111", "100", "111", "001", "111"],
-  T: ["111", "010", "010", "010", "010"],
-  A: ["111", "101", "111", "101", "101"],
-  R: ["111", "101", "110", "101", "101"],
-};
-const SMALL_PX = 2;
-
-const DOT_ROW = -1;
-const PADDLE_W = 4;
-const PADDLE_H = CELL * 2;
-const RALLY_HALF = 36;
-const BALL_SPEED = 0.07; // px per ms
-
-const glyphWidth = (rows: string[]) => Math.max(...rows.map((r) => r.length));
+// The ball eases in and out of the i's dot position while rallying between the paddles.
+const RALLY_MS = 1400;
 
 export class StartScene extends Phaser.Scene {
-  private gfx!: Phaser.GameObjects.Graphics;
-  private dotX = 0;
-  private dotY = 0;
+  private ball!: Phaser.GameObjects.Image;
+  private scaleToCanvas = 1;
+  private offsetX = 0;
+  private offsetY = 0;
   private elapsed = 0;
 
   constructor() {
     super("StartScene");
   }
 
+  preload(): void {
+    this.load.image("title-word", wordUrl);
+    this.load.image("title-dot", dotUrl);
+    this.load.image("title-paddle-left", paddleLeftUrl);
+    this.load.image("title-paddle-right", paddleRightUrl);
+    this.load.image("title-button", buttonUrl);
+  }
+
   create(): void {
+    setHelpVisible(this.game, false);
     this.cameras.main.setBackgroundColor(TITLE_BG);
+    const { width, height } = this.scale;
+    this.scaleToCanvas = Math.min(width / DRAWING.w, height / DRAWING.h);
+    this.offsetX = (width - DRAWING.w * this.scaleToCanvas) / 2;
+    this.offsetY = (height - DRAWING.h * this.scaleToCanvas) / 2;
     this.elapsed = 0;
-    this.gfx = this.add.graphics();
-    this.drawTitle(this.add.graphics());
-    this.drawStartButton();
+
+    this.place("title-word", PIECES.word);
+    this.place("title-paddle-left", PIECES.paddleLeft);
+    this.place("title-paddle-right", PIECES.paddleRight);
+    this.ball = this.place("title-dot", PIECES.dot);
+    this.addStartButton();
 
     const keyboard = this.input.keyboard!;
     keyboard.addCapture("SPACE,ENTER");
@@ -57,78 +55,61 @@ export class StartScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     this.elapsed += Math.min(delta, 250);
-    const span = RALLY_HALF * 2;
-    const travelled = (this.elapsed * BALL_SPEED) % (span * 2);
-    const offset = travelled < span ? travelled : span * 2 - travelled;
-    const ballX = Math.round(this.dotX - RALLY_HALF + offset);
+    const { dot, paddleLeft, paddleRight } = PIECES;
+    const leftX = paddleLeft.x + paddleLeft.w - 12;
+    const rightX = paddleRight.x + 12 - dot.w;
+    const leftY = paddleLeft.y + paddleLeft.h / 2 - dot.h / 2;
+    const rightY = paddleRight.y + paddleRight.h / 2 - dot.h / 2;
 
-    const g = this.gfx;
-    g.clear();
-    g.fillStyle(WHITE);
-    const paddleY = this.dotY + CELL / 2 - PADDLE_H / 2;
-    g.fillRect(this.dotX - RALLY_HALF - PADDLE_W, paddleY, PADDLE_W, PADDLE_H);
-    g.fillRect(this.dotX + RALLY_HALF + CELL, paddleY, PADDLE_W, PADDLE_H);
-    g.fillRect(ballX, this.dotY, CELL, CELL);
+    // Phase 0..1 goes left paddle -> right paddle, 1..2 comes back.
+    const phase = (this.elapsed / RALLY_MS) % 2;
+    const t = phase < 1 ? phase : 2 - phase;
+    const x = leftX + (rightX - leftX) * t;
+    const toward = x < dot.x ? (dot.x - x) / (dot.x - leftX) : (x - dot.x) / (rightX - dot.x);
+    const sideY = x < dot.x ? leftY : rightY;
+    const y = dot.y - (dot.y - sideY) * toward * toward;
+    this.ball.setPosition(this.toCanvasX(x), this.toCanvasY(y));
   }
 
-  private drawTitle(g: Phaser.GameObjects.Graphics): void {
-    const cols = TITLE.reduce((sum, glyph) => sum + glyphWidth(glyph), 0) + TITLE.length - 1;
-    const left = Math.round((W - cols * CELL) / 2);
-    const rows = TITLE[0].length - DOT_ROW;
-    const top = Math.round((H - rows * CELL) / 2) - DOT_ROW * CELL + 6;
-    g.fillStyle(WHITE);
-    let x = left;
-    TITLE.forEach((glyph, index) => {
-      glyph.forEach((row, r) => {
-        [...row].forEach((bit, c) => {
-          if (bit === "1") g.fillRect(x + c * CELL, top + r * CELL, CELL, CELL);
-        });
-      });
-      if (index === I_INDEX) {
-        this.dotX = x;
-        this.dotY = top + DOT_ROW * CELL;
-      }
-      x += (glyphWidth(glyph) + 1) * CELL;
-    });
-  }
-
-  private drawStartButton(): void {
-    const label = "START";
-    const textW = (label.length * 4 - 1) * SMALL_PX;
-    const textH = 5 * SMALL_PX;
-    const pad = 4;
-    const bw = textW + pad * 2;
-    const bh = textH + pad * 2;
-    const bx = W - 6 - bw;
-    const by = 6;
-
-    const g = this.add.graphics();
-    g.fillStyle(WHITE);
-    g.fillRect(bx, by, bw, bh);
-    g.fillStyle(BLACK);
-    [...label].forEach((ch, i) => {
-      SMALL[ch].forEach((row, r) => {
-        [...row].forEach((bit, c) => {
-          if (bit === "1") {
-            g.fillRect(
-              bx + pad + (i * 4 + c) * SMALL_PX,
-              by + pad + r * SMALL_PX,
-              SMALL_PX,
-              SMALL_PX,
-            );
-          }
-        });
-      });
-    });
-
-    this.add
-      .zone(bx, by, bw, bh)
+  private place(key: string, at: { x: number; y: number }): Phaser.GameObjects.Image {
+    return this.add
+      .image(this.toCanvasX(at.x), this.toCanvasY(at.y), key)
       .setOrigin(0)
-      .setInteractive({ useHandCursor: true })
-      .once("pointerdown", () => this.startGame());
+      .setScale(this.scaleToCanvas);
+  }
+
+  private addStartButton(): void {
+    const { button } = PIECES;
+    const image = this.place("title-button", button);
+    const centerX = this.toCanvasX(button.x + button.w / 2);
+    const centerY = this.toCanvasY(button.y + button.h / 2);
+    const label = this.add
+      .text(centerX, centerY, "Start", {
+        fontFamily: START_FONT,
+        fontSize: `${Math.round(110 * this.scaleToCanvas)}px`,
+        color: "#000000",
+        // Phaser under-measures this font's ascent; padding keeps the glyph tops unclipped.
+        padding: { x: 12, y: 24 },
+      })
+      .setOrigin(0.5)
+      .setAngle(-4);
+    label.setInteractive({ useHandCursor: true });
+    image.setInteractive({ useHandCursor: true, pixelPerfect: true });
+    label.once("pointerdown", () => this.startGame());
+    image.once("pointerdown", () => this.startGame());
+  }
+
+  private toCanvasX(x: number): number {
+    return this.offsetX + x * this.scaleToCanvas;
+  }
+
+  private toCanvasY(y: number): number {
+    return this.offsetY + y * this.scaleToCanvas;
   }
 
   private startGame(): void {
+    if (!this.scene.isActive()) return;
+    setHelpVisible(this.game, true);
     this.scene.start("PlayScene", { start: true });
   }
 }

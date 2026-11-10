@@ -6,7 +6,10 @@ export const BS = 3;
 export const TOP_GAP = 6;
 export const WIN = 11;
 export const P_SPEED = 2.5;
-export const AI_SPEED = 1.6;
+// The CPU starts out slow and sloppy, then sharpens up as you score against it.
+export const AI_SPEED_MIN = 1.0;
+export const AI_SPEED_MAX = 1.6;
+export const AI_LEARN_POINTS = 6;
 export const SPEEDS = [1.5, 2.0, 2.6] as const;
 export const VY = [-3, -2, -1, 0, 0, 1, 2, 3] as const;
 export const SERVE_DELAY = 60;
@@ -94,7 +97,18 @@ export function segmentOf(ballY: number, paddleY: number): number {
   return Math.max(0, Math.min(7, Math.floor((ballY + BS / 2 - paddleY) / (PH / 8))));
 }
 
-const newAim = (rng: Rng): number => (rng() - 0.5) * (PH - 4);
+const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
+
+/** CPU skill from 0 (fresh game) to 1, rising with each point the player wins. */
+export const cpuSkill = (state: PongState): number =>
+  Math.min(1, state.left.score / AI_LEARN_POINTS);
+
+export const cpuSpeed = (state: PongState): number =>
+  lerp(AI_SPEED_MIN, AI_SPEED_MAX, cpuSkill(state));
+
+// A clumsy CPU aims anywhere within ±(PH / 2 + 3), so it sometimes whiffs.
+const newAim = (state: PongState, rng: Rng): number =>
+  (rng() - 0.5) * lerp(PH + 6, PH - 4, cpuSkill(state));
 
 function serve(state: PongState, rng: Rng): void {
   const { ball } = state;
@@ -104,7 +118,7 @@ function serve(state: PongState, rng: Rng): void {
   ball.vx = SPEEDS[0] * state.serveDir;
   ball.vy = VY[1 + Math.floor(rng() * 6)] * 0.5;
   ball.live = true;
-  state.aiAim = newAim(rng);
+  state.aiAim = newAim(state, rng);
 }
 
 function hitPaddle(state: PongState, paddle: Paddle, dir: -1 | 1, rng: Rng): void {
@@ -112,15 +126,18 @@ function hitPaddle(state: PongState, paddle: Paddle, dir: -1 | 1, rng: Rng): voi
   state.hits++;
   ball.vx = ballSpeed(state.hits) * dir;
   ball.vy = VY[segmentOf(ball.y, paddle.y)] * 0.5;
-  if (dir < 0) state.aiAim = newAim(rng);
+  if (dir < 0) state.aiAim = newAim(state, rng);
 }
 
 function moveCpu(state: PongState): void {
   const { ball, right } = state;
-  const target = ball.live && ball.vx > 0 ? ball.y + BS / 2 - PH / 2 + state.aiAim : midY;
+  // A slow CPU reacts late: it waits until the ball is well across the net.
+  const reactX = W * lerp(0.6, 0.3, cpuSkill(state));
+  const tracking = ball.live && ball.vx > 0 && ball.x > reactX;
+  const target = tracking ? ball.y + BS / 2 - PH / 2 + state.aiAim : midY;
   const diff = target - right.y;
   if (Math.abs(diff) > 1) {
-    right.y = clampPaddle(right.y + Math.sign(diff) * Math.min(AI_SPEED, Math.abs(diff)));
+    right.y = clampPaddle(right.y + Math.sign(diff) * Math.min(cpuSpeed(state), Math.abs(diff)));
   }
 }
 

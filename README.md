@@ -31,7 +31,7 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 
 ## CPU
 
-The original arcade game was two-player only. The CPU here is a simple tracker from that era. It follows the ball only while the ball is coming toward it, moves more slowly than you can, and aims a little off-centre each rally. It can be beaten with steep, fast shots and with shots along the top edge.
+The original arcade game was two-player only. The CPU here is a simple tracker from that era. It follows the ball only once the ball is coming toward it and past its reaction line, always moves more slowly than you can, and aims a little off-centre each rally. It starts a game slow and sloppy, so a first point is within reach, then gets quicker, reacts sooner and aims better with each point you win (up to 6). It can be beaten with steep, fast shots and with shots along the top edge.
 
 ## Deploy
 

@@ -1,8 +1,7 @@
 import Phaser from "phaser";
 import buttonUrl from "../../assets/start/button.png";
 import dotUrl from "../../assets/start/dot.png";
-import paddleLeftUrl from "../../assets/start/paddle-left.png";
-import paddleRightUrl from "../../assets/start/paddle-right.png";
+import paddleUrl from "../../assets/start/paddle.png";
 import wordUrl from "../../assets/start/word.png";
 import { setHelpVisible } from "../help";
 import { DRAWING, PIECES } from "./startLayout";
@@ -10,8 +9,8 @@ import { DRAWING, PIECES } from "./startLayout";
 export const TITLE_BG = 0x2458bf;
 export const START_FONT = '"Gochi Hand", cursive';
 
-// The ball eases in and out of the i's dot position while rallying between the paddles.
-const RALLY_MS = 1400;
+// Time for the ball to cross from one paddle to the other, passing over the i.
+const RALLY_MS = 900;
 
 export class StartScene extends Phaser.Scene {
   private ball!: Phaser.GameObjects.Image;
@@ -27,8 +26,7 @@ export class StartScene extends Phaser.Scene {
   preload(): void {
     this.load.image("title-word", wordUrl);
     this.load.image("title-dot", dotUrl);
-    this.load.image("title-paddle-left", paddleLeftUrl);
-    this.load.image("title-paddle-right", paddleRightUrl);
+    this.load.image("title-paddle", paddleUrl);
     this.load.image("title-button", buttonUrl);
   }
 
@@ -42,8 +40,9 @@ export class StartScene extends Phaser.Scene {
     this.elapsed = 0;
 
     this.place("title-word", PIECES.word);
-    this.place("title-paddle-left", PIECES.paddleLeft);
-    this.place("title-paddle-right", PIECES.paddleRight);
+    // One paddle drawing, mirrored, so both sides match.
+    this.place("title-paddle", PIECES.paddleLeft, PIECES.paddleLeft.scale).setFlipX(true);
+    this.place("title-paddle", PIECES.paddleRight, PIECES.paddleRight.scale);
     this.ball = this.place("title-dot", PIECES.dot);
     this.addStartButton();
 
@@ -56,26 +55,19 @@ export class StartScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.elapsed += Math.min(delta, 250);
     const { dot, paddleLeft, paddleRight } = PIECES;
-    const leftX = paddleLeft.x + paddleLeft.w - 12;
-    const rightX = paddleRight.x + 12 - dot.w;
-    const leftY = paddleLeft.y + paddleLeft.h / 2 - dot.h / 2;
-    const rightY = paddleRight.y + paddleRight.h / 2 - dot.h / 2;
-
-    // Phase 0..1 goes left paddle -> right paddle, 1..2 comes back.
+    // The paddle art has transparent padding around its outline; meet the outline, not the box.
+    const leftX = paddleLeft.x + paddleLeft.w - 12 * paddleLeft.scale;
+    const rightX = paddleRight.x + 12 * paddleRight.scale - dot.w;
     const phase = (this.elapsed / RALLY_MS) % 2;
     const t = phase < 1 ? phase : 2 - phase;
-    const x = leftX + (rightX - leftX) * t;
-    const toward = x < dot.x ? (dot.x - x) / (dot.x - leftX) : (x - dot.x) / (rightX - dot.x);
-    const sideY = x < dot.x ? leftY : rightY;
-    const y = dot.y - (dot.y - sideY) * toward * toward;
-    this.ball.setPosition(this.toCanvasX(x), this.toCanvasY(y));
+    this.ball.setPosition(this.toCanvasX(leftX + (rightX - leftX) * t), this.toCanvasY(dot.y));
   }
 
-  private place(key: string, at: { x: number; y: number }): Phaser.GameObjects.Image {
+  private place(key: string, at: { x: number; y: number }, scale = 1): Phaser.GameObjects.Image {
     return this.add
       .image(this.toCanvasX(at.x), this.toCanvasY(at.y), key)
       .setOrigin(0)
-      .setScale(this.scaleToCanvas);
+      .setScale(this.scaleToCanvas * scale);
   }
 
   private addStartButton(): void {

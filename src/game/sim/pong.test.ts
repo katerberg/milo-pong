@@ -3,9 +3,11 @@ import {
   ballSpeed,
   BS,
   clampPaddle,
+  cpuSpeed,
   createState,
   H,
   newGame,
+  P_SPEED,
   PH,
   segmentOf,
   SERVE_DELAY,
@@ -65,14 +67,15 @@ describe("pong sim", () => {
     expect(s.ball.vx).toBeGreaterThan(0);
   });
 
-  it("CPU wins 11-0 against an idle player and the game ends", () => {
+  it("CPU beats an idle player easily and the game ends", () => {
     const rng = seeded(3);
     const s = createState(rng);
     newGame(s, false);
     for (let i = 0; i < 200_000 && s.phase === "play"; i++) step(s, idle, rng);
     expect(s.phase).toBe("over");
     expect(s.right.score).toBe(WIN);
-    expect(s.left.score).toBe(0);
+    // A parked paddle can still return the odd ball past the clumsy early CPU.
+    expect(s.left.score).toBeLessThan(4);
   });
 
   it("CPU misses sometimes against a good player", () => {
@@ -85,6 +88,31 @@ describe("pong sim", () => {
       step(s, idle, rng);
     }
     expect(s.phase).toBe("over");
+    expect(s.left.score).toBeGreaterThan(0);
+  });
+
+  it("CPU starts slower than the player and speeds up as the player scores", () => {
+    const s = createState(seeded(6));
+    newGame(s, false);
+    const start = cpuSpeed(s);
+    expect(start).toBeLessThan(P_SPEED);
+    s.left.score = 6;
+    expect(cpuSpeed(s)).toBeGreaterThan(start);
+    expect(cpuSpeed(s)).toBeLessThan(P_SPEED);
+  });
+
+  it("a good player scores early against a fresh CPU", () => {
+    const rng = seeded(7);
+    const s = createState(rng);
+    newGame(s, false);
+    let points = 0;
+    for (let i = 0; i < 200_000 && points < 3; i++) {
+      const target = s.ball.y + BS / 2 - PH / 2;
+      const diff = target - s.left.y;
+      const dir = Math.abs(diff) > 1.5 ? Math.sign(diff) : 0;
+      const events = step(s, { left: (s.ball.vx < 0 ? dir : 0) as -1 | 0 | 1, right: 0 }, rng);
+      if (events.includes("score")) points++;
+    }
     expect(s.left.score).toBeGreaterThan(0);
   });
 

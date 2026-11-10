@@ -41,8 +41,9 @@ export class PlayScene extends Phaser.Scene {
     super("PlayScene");
   }
 
-  create(): void {
+  create(data: { start?: boolean } = {}): void {
     this.state = createState(this.rng);
+    if (data.start) newGame(this.state, false);
     this.gfx = this.add.graphics();
     const keyboard = this.input.keyboard!;
     this.keys = keyboard.addKeys({ w: "W", s: "S", up: "UP", down: "DOWN" }) as Keys;

@@ -1,4 +1,4 @@
-# Pong
+# Ping
 
 A tiny, 1-bit, keyboard-controlled take on the 1972 Atari Pong, built with [Phaser](https://phaser.io), TypeScript and Vite.
 
@@ -16,7 +16,8 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 
 ## Controls
 
-- **Space**: start or restart
+- **Start** button, **Space** or **Enter**: start from the title screen
+- **Space**: restart after a game ends
 - **W / S** or **↑ / ↓**: move your (left) paddle
 - **1**: play against the CPU · **2**: two players (left uses W/S, right uses ↑/↓)
 

@@ -8,7 +8,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   parent: "game-container",
   width: W * ZOOM,
   height: H * ZOOM,
-  backgroundColor: "#000000",
+  backgroundColor: "#1C8028",
   banner: false,
   antialias: true,
   scene: [StartScene, PlayScene],

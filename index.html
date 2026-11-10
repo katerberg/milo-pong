@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pong</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #fff; overflow: hidden; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center;
+         font: 14px/1.4 monospace; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+  p { margin: 8px 16px 0; text-align: center; }
+</style>
+</head>
+<body>
+<canvas id="c" width="200" height="150"></canvas>
+<p id="help">SPACE serve / restart &nbsp;·&nbsp; W/S or &uarr;/&darr; move &nbsp;·&nbsp; 1 vs CPU &nbsp;·&nbsp; 2 two players (W/S vs &uarr;/&darr;)</p>
+<script>
+"use strict";
+// ---- Field (internal resolution, drawn 1-bit: black and white only) ----
+const W = 200, H = 150;
+const PW = 3, PH = 16;            // paddle size; 8 segments of 2px
+const BS = 3;                     // ball size
+const TOP_GAP = 6;                // original quirk: paddles can't reach the very top
+const WIN = 11;                   // first to 11 wins
+const P_SPEED = 2.5;              // human paddle px/frame
+const AI_SPEED = 1.6;             // CPU paddle px/frame (slower than a human hand)
+const SPEEDS = [1.5, 2.0, 2.6];   // ball speeds up after 4 and 12 hits
+const VY = [-3, -2, -1, 0, 0, 1, 2, 3]; // 8 paddle segments; centre two return flat
+
+const cv = document.getElementById("c");
+const ctx = cv.getContext("2d");
+function fit() {
+  const s = Math.max(1, Math.floor(Math.min(innerWidth / W, (innerHeight - 40) / H)));
+  cv.style.width = W * s + "px"; cv.style.height = H * s + "px";
+}
+addEventListener("resize", fit); fit();
+
+// ---- Sound: square-wave blips like the original's three tones ----
+let ac = null;
+function beep(freq, ms) {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "square"; o.frequency.value = freq; g.gain.value = 0.08;
+    o.connect(g); g.connect(ac.destination);
+    o.start(); o.stop(ac.currentTime + ms / 1000);
+  } catch (e) {}
+}
+const sndPaddle = () => beep(490, 40), sndWall = () => beep(245, 40), sndScore = () => beep(245, 260);
+
+// ---- State ----
+const keys = {};
+let twoPlayer = false;
+const L = { x: 10, y: (H - PH) / 2, score: 0 };
+const R = { x: W - 10 - PW, y: (H - PH) / 2, score: 0 };
+const ball = { x: 0, y: 0, vx: 0, vy: 0, live: false };
+let hits = 0, serveDir = Math.random() < 0.5 ? -1 : 1, serveTimer = 0;
+let state = "attract";            // attract | play | over
+let aiAim = 0;
+
+function resetBall() { ball.live = false; ball.x = (W - BS) / 2; ball.y = (H - BS) / 2; }
+function newGame() {
+  L.score = R.score = 0; L.y = R.y = (H - PH) / 2;
+  state = "play"; resetBall(); serveTimer = 60;
+}
+function serve() {
+  hits = 0;
+  ball.x = (W - BS) / 2;
+  ball.y = 20 + Math.random() * (H - 40);
+  ball.vx = SPEEDS[0] * serveDir;
+  ball.vy = VY[1 + Math.floor(Math.random() * 6)] * 0.5;
+  ball.live = true;
+  aiAim = (Math.random() - 0.5) * (PH - 4);
+}
+function speed() { return hits >= 12 ? SPEEDS[2] : hits >= 4 ? SPEEDS[1] : SPEEDS[0]; }
+const clampP = (y) => Math.max(TOP_GAP, Math.min(H - PH, y));
+
+addEventListener("keydown", (e) => {
+  keys[e.code] = true;
+  if (["ArrowUp", "ArrowDown", "Space"].includes(e.code)) e.preventDefault();
+  if (e.code === "Digit1") { twoPlayer = false; newGame(); }
+  if (e.code === "Digit2") { twoPlayer = true; newGame(); }
+  if (e.code === "Space" && state !== "play") newGame();
+});
+addEventListener("keyup", (e) => { keys[e.code] = false; });
+
+// ---- Update ----
+function paddleHit(p, dir) {
+  const seg = Math.max(0, Math.min(7, Math.floor((ball.y + BS / 2 - p.y) / (PH / 8))));
+  hits++;
+  ball.vx = speed() * dir;
+  ball.vy = VY[seg] * 0.5;
+  sndPaddle();
+  if (dir < 0) aiAim = (Math.random() - 0.5) * (PH - 4);
+}
+
+function update() {
+  // Left paddle (player 1): W/S, plus arrows in 1-player mode
+  let d = 0;
+  if (keys.KeyW || (!twoPlayer && keys.ArrowUp)) d -= P_SPEED;
+  if (keys.KeyS || (!twoPlayer && keys.ArrowDown)) d += P_SPEED;
+  L.y = clampP(L.y + d);
+
+  // Right paddle: player 2 or CPU
+  if (twoPlayer) {
+    d = 0;
+    if (keys.ArrowUp) d -= P_SPEED;
+    if (keys.ArrowDown) d += P_SPEED;
+    R.y = clampP(R.y + d);
+  } else if (state !== "over") {
+    // Simple tracker: follow the ball while it approaches, otherwise drift to centre.
+    const target = ball.live && ball.vx > 0
+      ? ball.y + BS / 2 - PH / 2 + aiAim
+      : (H - PH) / 2;
+    const diff = target - R.y;
+    if (Math.abs(diff) > 1) R.y = clampP(R.y + Math.sign(diff) * Math.min(AI_SPEED, Math.abs(diff)));
+  }
+
+  if (state !== "play") return;
+  if (!ball.live) { if (--serveTimer <= 0) serve(); return; }
+
+  const px = ball.x;
+  ball.x += ball.vx; ball.y += ball.vy;
+
+  if (ball.y < 0) { ball.y = -ball.y; ball.vy = -ball.vy; sndWall(); }
+  if (ball.y > H - BS) { ball.y = 2 * (H - BS) - ball.y; ball.vy = -ball.vy; sndWall(); }
+
+  const overlaps = (p) => ball.y + BS > p.y && ball.y < p.y + PH;
+  if (ball.vx < 0 && px >= L.x + PW && ball.x < L.x + PW && overlaps(L)) {
+    ball.x = L.x + PW; paddleHit(L, 1);
+  } else if (ball.vx > 0 && px + BS <= R.x && ball.x + BS > R.x && overlaps(R)) {
+    ball.x = R.x - BS; paddleHit(R, -1);
+  }
+
+  if (ball.x + BS < 0 || ball.x > W) {
+    const leftScored = ball.x > W;
+    (leftScored ? L : R).score++;
+    serveDir = leftScored ? 1 : -1;   // serve toward the player who missed
+    sndScore();
+    resetBall();
+    if (L.score >= WIN || R.score >= WIN) state = "over";
+    else serveTimer = 60;
+  }
+}
+
+// ---- Draw ----
+const DIGITS = [ // 4x5 block digits, row by row
+  "11111001100110011111", "00100010001000100010", "11110001111110001111", "11110001111100011111",
+  "10011001111100010001", "11111000111100011111", "11111000111110011111", "11110001000100010001",
+  "11111001111110011111", "11111001111100011111"];
+function digit(n, x, y, s) {
+  const g = DIGITS[n];
+  for (let i = 0; i < 20; i++) if (g[i] === "1") ctx.fillRect(x + (i % 4) * s, y + ((i / 4) | 0) * s, s, s);
+}
+function number(n, x, y) {
+  const s = 3;
+  if (n >= 10) { digit((n / 10) | 0, x - 15, y, s); }
+  digit(n % 10, x, y, s);
+}
+function draw() {
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#fff";
+  for (let y = 0; y < H; y += 8) ctx.fillRect(W / 2 - 1, y, 2, 4);
+  number(L.score, W / 2 - 30, 6);
+  number(R.score, W / 2 + 18, 6);
+  ctx.fillRect(L.x, Math.round(L.y), PW, PH);
+  ctx.fillRect(R.x, Math.round(R.y), PW, PH);
+  if (state === "play" && ball.live) ctx.fillRect(Math.round(ball.x), Math.round(ball.y), BS, BS);
+}
+
+// ---- Fixed 60 Hz loop ----
+let last = performance.now(), acc = 0;
+function frame(t) {
+  acc += Math.min(250, t - last); last = t;
+  while (acc >= 1000 / 60) { update(); acc -= 1000 / 60; }
+  draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+# Same setup as katerberg/website, without the CNAME step.
+# Copies the game into ./out and deploys it to the `public` branch,
+# which GitHub Pages serves.
+
+name: GitHub Pages deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      - name: Build my App
+        run: mkdir -p out && cp index.html ./out/ && touch ./out/.nojekyll
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: public # The branch the action should deploy to.
+          FOLDER: out # The folder the action should deploy.

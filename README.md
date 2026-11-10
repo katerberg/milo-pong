@@ -17,3 +17,6 @@ A tiny, 1-bit, keyboard-controlled take on the 1972 Atari Pong. It's one file an
 
 ## CPU
 The original arcade game was two-player only. The CPU here is a simple tracker from that era. It follows the ball only while the ball is coming toward it, moves more slowly than you can, and aims a little off-centre each rally. It can be beaten with steep, fast shots and with shots along the top edge.
+
+## Deploy
+On each push to `main`, a GitHub Action copies the game to the `public` branch. To serve it, set GitHub Pages (Settings → Pages) to deploy from the `public` branch, `/ (root)`.

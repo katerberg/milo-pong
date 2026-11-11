@@ -15,6 +15,9 @@ import {
 
 const STEP_MS = 1000 / 60;
 
+/** The game renders at ZOOM x the 200 x 150 field so the title art stays smooth. */
+export const ZOOM = 4;
+
 const DIGITS = [
   "11111001100110011111",
   "00100010001000100010",
@@ -41,8 +44,10 @@ export class PlayScene extends Phaser.Scene {
     super("PlayScene");
   }
 
-  create(): void {
+  create(data: { start?: boolean } = {}): void {
     this.state = createState(this.rng);
+    if (data.start) newGame(this.state, false);
+    this.cameras.main.setZoom(ZOOM).centerOn(W / 2, H / 2);
     this.gfx = this.add.graphics();
     const keyboard = this.input.keyboard!;
     this.keys = keyboard.addKeys({ w: "W", s: "S", up: "UP", down: "DOWN" }) as Keys;

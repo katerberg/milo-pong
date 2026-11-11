@@ -20,8 +20,8 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 
 ## Controls
 
-- **Start** button, **Space** or **Enter**: go from the title screen to the player picker
-- On the player picker, tap or click **cpu/plyr** (or press **1**, **Space** or **Enter**) to play the CPU, or **plyr/plyr** (or **2**) for two players. **Esc** goes back to the title.
+- **Start** button, **Space** or **Enter**: go from the title screen to the opponent screen
+- On the opponent screen, tap or click **cpu** (or press **1** or **C**) to play the CPU, or **plyr** (or **2** or **P**) for two players. **Esc** goes back to the title.
 - **Space**, **Enter**, **Esc** or the **back** bar: back to the title from the win/loss screen
 - **W / S** or **↑ / ↓**: move your (left) paddle
 - **A / D** or **← / →**: tilt your paddle (with the turn upgrade)
@@ -75,9 +75,9 @@ http://localhost:5173/?upgrades=slime,turn&cpuUpgrades=size,size
 
 The ball art comes from a hand drawing and lives in `src/assets/play`.
 
-## Player picker
+## Opponent screen
 
-After Start, a blue screen shows two green crayon boxes from a hand drawing: **cpu/plyr** (you against the CPU) and **plyr/plyr** (two players). The cpu box is cut from the photo with its own pencil lettering; the plyr/plyr box is the same box with the lettering rubbed out and typed in Gochi Hand. Both PNGs live in `src/assets/mode`.
+After Start, the whole screen is one giant green crayon box from a hand drawing, reading **cpu/plyr**. Tap anywhere left of the slash to play the CPU, or right of it to play another player. The box is cut from the photo with its own pencil lettering and lives in `src/assets/mode`; the slash's position is in `src/game/scenes/opponent.ts`.
 
 ## Win and loss screens
 

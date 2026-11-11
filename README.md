@@ -67,6 +67,10 @@ The ball art comes from a hand drawing and lives in `src/assets/play`.
 
 The lettering is traced from hand drawings and lives as PNGs in `src/assets/end`. The win screen is purple with "WIN!" and "+50". The +50 is always shown but doesn't count toward anything yet. The loss screen is orange (`#ffa312`) with "Lose!". Both have a **back** bar along the bottom that returns to the title.
 
+## Credits screen
+
+The **Credits** box in the top-left corner of the title screen (or **C**) opens a black page with the credits in white. The lettering and the **back** word are traced from a hand drawing and live as PNGs in `src/assets/credits`. The **back** bar along the bottom, **Esc** or **Backspace** returns to the title.
+
 ## CPU
 
 The original arcade game was two-player only. The CPU here is a simple tracker from that era. It follows the ball only once the ball is coming toward it and past its reaction line, always moves more slowly than you can, and aims a little off-centre each rally. It starts a game slow and sloppy, so a first point is within reach, then gets quicker, reacts sooner and aims better with each point you win (fully sharp at 4). It can be beaten with steep, fast shots and with shots along the top edge.

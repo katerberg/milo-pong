@@ -18,4 +18,6 @@ export const PIECES = {
   paddleLeft: { x: DOT_CENTER_X - PADDLE_GAP - PADDLE.w, y: PADDLE_Y, ...PADDLE },
   paddleRight: { x: DOT_CENTER_X + PADDLE_GAP, y: PADDLE_Y, ...PADDLE },
   button: { x: 805, y: 95, w: 332, h: 232 },
+  // The same drawn box, smaller, in the top-left corner.
+  creditsButton: { x: 40, y: 30, w: 332 * 0.6, h: 232 * 0.6, scale: 0.6 },
 } as const;

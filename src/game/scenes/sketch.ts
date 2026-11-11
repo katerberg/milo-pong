@@ -13,6 +13,12 @@ export const SLIME = 0x66f04a;
 /** How far the art extends past the hit box on each side (outline is centred on the box edge). */
 export const PAD = 2;
 
+/** The cannon drawn on the front of a paddle: a block, then a narrower barrel (field pixels). */
+const CANNON_BASE = { w: 2, h: 6 };
+const CANNON_BARREL = { w: 2, h: 3 };
+/** How far the cannon sticks out in front of the paddle. */
+export const CANNON_LEN = CANNON_BASE.w + CANNON_BARREL.w;
+
 /** Small deterministic PRNG so the sketch looks the same every run. */
 function mulberry32(seed: number): () => number {
   let a = seed;
@@ -62,28 +68,53 @@ function strokeLoop(g: Phaser.GameObjects.Graphics, pts: Pt[]): void {
   g.closePath();
 }
 
+/** Width of a baked paddle texture in field pixels, with or without the cannon. */
+export const paddleTextureWidth = (cannon: boolean): number =>
+  PW + PAD * 2 + (cannon ? CANNON_LEN : 0);
+
 /**
- * Bakes (once) and returns the texture for a paddle of height h, at the camera zoom so it stays
- * crisp. Slimed paddles are filled green. Same seed per height, so a paddle keeps its wobble.
+ * Bakes (once) and returns the texture for a left-hand paddle of height h, at the camera zoom so
+ * it stays crisp. Slimed paddles are filled green; with a cannon, it sticks out to the right.
+ * Same seed per height, so a paddle keeps its wobble.
  */
 export function paddleTexture(
   scene: Phaser.Scene,
   zoom: number,
   h: number,
   slime: boolean,
+  cannon = false,
 ): string {
-  const key = `sketch-paddle-${h}${slime ? "-slime" : ""}`;
+  const key = `sketch-paddle-${h}${slime ? "-slime" : ""}${cannon ? "-cannon" : ""}`;
   if (scene.textures.exists(key)) return key;
   const paddle = scene.make.graphics({}, false);
   paddle.setScale(zoom);
-  const loop = wobblyRect(PAD, PAD, PW, h, mulberry32(7 + h));
-  paddle.fillStyle(slime ? SLIME : PAPER);
-  strokeLoop(paddle, loop);
-  paddle.fillPath();
-  paddle.lineStyle(LINE, INK, 1);
-  strokeLoop(paddle, loop);
-  paddle.strokePath();
-  paddle.generateTexture(key, (PW + PAD * 2) * zoom, (h + PAD * 2) * zoom);
+  const rnd = mulberry32(7 + h);
+  const loop = wobblyRect(PAD, PAD, PW, h, rnd);
+  const shapes: { loop: Pt[]; fill: number }[] = [];
+  if (cannon) {
+    const midY = PAD + h / 2;
+    const baseX = PAD + PW;
+    const base = wobblyRect(baseX, midY - CANNON_BASE.h / 2, CANNON_BASE.w, CANNON_BASE.h, rnd);
+    const barrelX = baseX + CANNON_BASE.w;
+    const barrel = wobblyRect(
+      barrelX,
+      midY - CANNON_BARREL.h / 2,
+      CANNON_BARREL.w,
+      CANNON_BARREL.h,
+      rnd,
+    );
+    shapes.push({ loop: barrel, fill: PAPER }, { loop: base, fill: PAPER });
+  }
+  shapes.push({ loop, fill: slime ? SLIME : PAPER });
+  for (const shape of shapes) {
+    paddle.fillStyle(shape.fill);
+    strokeLoop(paddle, shape.loop);
+    paddle.fillPath();
+    paddle.lineStyle(LINE, INK, 1);
+    strokeLoop(paddle, shape.loop);
+    paddle.strokePath();
+  }
+  paddle.generateTexture(key, paddleTextureWidth(cannon) * zoom, (h + PAD * 2) * zoom);
   paddle.destroy();
   return key;
 }

@@ -24,4 +24,6 @@ export const sfx = {
   transform: () => beep(980, 30),
   upgrade: () => beep(740, 300),
   stick: () => beep(160, 80),
+  fire: () => beep(120, 120),
+  dissolve: () => beep(330, 60),
 };

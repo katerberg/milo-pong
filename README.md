@@ -24,7 +24,7 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 - **Space** or **Enter**: play again from the win/loss screen · **Esc** or the **back** bar: back to the title
 - **W / S** or **↑ / ↓**: move your (left) paddle
 - **A / D** or **← / →**: tilt your paddle (with the turn upgrade)
-- **Space**: let go of a ball stuck to your paddle (with the slime upgrade)
+- **Space**: let go of a ball stuck to your paddle (with the slime upgrade), or else fire your cannon (with the cannon upgrade)
 - **1**: play against the CPU · **2**: two players. The left player uses W/S, A/D and Space; the right player uses ↑/↓, ←/→ and Enter.
 
 ## Rules (as in the original, except the winning score)
@@ -44,17 +44,18 @@ Each time an ordinary ball crosses the net for the first time in a rally, it has
 - Scoring with an ordinary ball is always a normal point.
 - Upgrades stack, and any mix is allowed. Small balls under each score show what each side holds. Upgrades reset when a new game starts.
 
-| Upgrade        | Effect                                                                                                                                                                        |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Strength boost | Your hits travel a third faster per boost. When the other side hits the ball back, it travels at their own speed.                                                             |
-| Speed boost    | Your paddle moves a third faster per boost.                                                                                                                                   |
-| Size up        | Your paddle grows 3px longer per boost.                                                                                                                                       |
-| Slime          | Your paddle turns green and sticky: the ball stays on it until you press Space. The CPU lets go after half a second. Extra slime has no further effect.                       |
-| Turn           | A / D (or ← / →) tilts your paddle 45° either way, and a tilted paddle sends the ball off at 45°. Extra turns have no further effect. The CPU picks a random tilt each rally. |
+| Upgrade        | Effect                                                                                                                                                                                                                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Strength boost | Your hits travel a third faster per boost. When the other side hits the ball back, it travels at their own speed.                                                                                                                                                                              |
+| Speed boost    | Your paddle moves a third faster per boost.                                                                                                                                                                                                                                                    |
+| Size up        | Your paddle grows 3px longer per boost.                                                                                                                                                                                                                                                        |
+| Slime          | Your paddle turns green and sticky: the ball stays on it until you press Space. The CPU lets go after half a second. Extra slime has no further effect.                                                                                                                                        |
+| Turn           | A / D (or ← / →) tilts your paddle 45° either way, and a tilted paddle sends the ball off at 45°. Extra turns have no further effect. The CPU picks a random tilt each rally.                                                                                                                  |
+| Cannon         | A cannon appears on your paddle. Space fires a second ball straight ahead. If it gets past the other paddle, you score a point; if the other paddle touches it, it dissolves. Firing uses up the upgrade and frees its slot. The CPU fires now and then while the ball is heading back to you. |
 
 ### Debug: start with upgrades
 
-Add `?upgrades=` to the URL to start every game holding those upgrades, and `?cpuUpgrades=` to do the same for the right side (the CPU or player two). List up to 3 names separated by commas. Use the ids `strengthBoost`, `speedBoost`, `sizeUp`, `slime` and `turn`, or the short names `strength`, `speed` and `size`. Case doesn't matter, and unknown names are ignored. For example:
+Add `?upgrades=` to the URL to start every game holding those upgrades, and `?cpuUpgrades=` to do the same for the right side (the CPU or player two). List up to 3 names separated by commas. Use the ids `strengthBoost`, `speedBoost`, `sizeUp`, `slime`, `turn` and `cannon`, or the short names `strength`, `speed` and `size`. Case doesn't matter, and unknown names are ignored. For example:
 
 ```
 http://localhost:5173/?upgrades=slime,turn&cpuUpgrades=size,size

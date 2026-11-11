@@ -1,49 +1,40 @@
 import Phaser from "phaser";
-import { TOUCH_STICK_RADIUS, TouchStick, type StickDirection } from "./touchStick";
+import { TouchFollow, type Tilt } from "./touchFollow";
 
 /**
- * Dot-Man's touch scheme: a finger put down anywhere on the page (the margins around the
- * canvas too) becomes a stick, and dragging it steers. A quick tap reads as Space.
+ * Finger-follow touch: a finger put down anywhere on the page (the margins around the canvas
+ * too) steers the paddle toward its height. A quick tap reads as Space; a sideways swipe tilts.
  * Touches are read from the window because Phaser never sees ones that start off the canvas.
+ *
+ * Returns a reader for the finger's height in field pixels (0 at the top of the canvas,
+ * `fieldHeight` at the bottom), or null when no finger is steering.
  */
-export function createTouchStick(
+export function createTouchFollow(
   scene: Phaser.Scene,
-  handlers: { onTap: () => void; onDirection: (direction: StickDirection | null) => void },
-): () => StickDirection | null {
-  const stick = new TouchStick();
-  const ring = stickElement("touch-stick-ring", TOUCH_STICK_RADIUS * 2);
-  const knob = stickElement("touch-stick-knob", TOUCH_STICK_RADIUS);
-
-  const draw = (): void => {
-    const view = stick.view;
-    ring.hidden = knob.hidden = view === null;
-    if (view === null) return;
-    place(ring, view.origin);
-    place(knob, view.finger);
-  };
+  fieldHeight: number,
+  handlers: { onTap: () => void; onTilt: (tilt: Tilt) => void },
+): () => number | null {
+  const follow = new TouchFollow();
+  const point = (touch: Touch) => ({ x: touch.clientX, y: touch.clientY });
 
   const onStart = (event: TouchEvent): void => {
     for (const touch of Array.from(event.changedTouches)) {
-      if (stick.start(touch.identifier, { x: touch.clientX, y: touch.clientY })) handlers.onTap();
+      if (follow.start(touch.identifier, point(touch), event.timeStamp)) handlers.onTap();
     }
-    draw();
   };
   const onMove = (event: TouchEvent): void => {
     for (const touch of Array.from(event.changedTouches)) {
-      const turned = stick.move(touch.identifier, { x: touch.clientX, y: touch.clientY });
-      if (turned !== undefined) handlers.onDirection(turned);
+      const tilt = follow.move(touch.identifier, point(touch));
+      if (tilt !== undefined) handlers.onTilt(tilt);
     }
-    draw();
   };
   const onEnd = (event: TouchEvent): void => {
     for (const touch of Array.from(event.changedTouches)) {
-      if (stick.end(touch.identifier)) handlers.onTap();
+      if (follow.end(touch.identifier, event.timeStamp)) handlers.onTap();
     }
-    draw();
   };
   const onCancel = (event: TouchEvent): void => {
-    for (const touch of Array.from(event.changedTouches)) stick.end(touch.identifier);
-    draw();
+    for (const touch of Array.from(event.changedTouches)) follow.cancel(touch.identifier);
   };
 
   window.addEventListener("touchstart", onStart, { passive: true });
@@ -55,11 +46,15 @@ export function createTouchStick(
     window.removeEventListener("touchmove", onMove);
     window.removeEventListener("touchend", onEnd);
     window.removeEventListener("touchcancel", onCancel);
-    ring.remove();
-    knob.remove();
   });
 
-  return () => stick.direction;
+  return () => {
+    // Touch event timestamps share performance.now()'s clock.
+    const y = follow.target(performance.now());
+    if (y === null) return null;
+    const rect = scene.game.canvas.getBoundingClientRect();
+    return rect.height > 0 ? ((y - rect.top) / rect.height) * fieldHeight : null;
+  };
 }
 
 /**
@@ -82,17 +77,4 @@ export function onScreenTap(scene: Phaser.Scene, onTap: () => void): void {
     scene.input.off(Phaser.Input.Events.POINTER_DOWN, onPointerDown);
     window.removeEventListener("touchstart", onMarginTouch);
   });
-}
-
-function stickElement(className: string, size: number): HTMLDivElement {
-  const element = document.createElement("div");
-  element.className = className;
-  element.hidden = true;
-  element.style.width = element.style.height = `${size}px`;
-  document.body.append(element);
-  return element;
-}
-
-function place(element: HTMLElement, at: { x: number; y: number }): void {
-  element.style.transform = `translate(${at.x}px, ${at.y}px) translate(-50%, -50%)`;
 }

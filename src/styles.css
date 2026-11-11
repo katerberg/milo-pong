@@ -62,28 +62,3 @@ body {
     font-size: 12px;
   }
 }
-
-/* Dot-Man's touch stick: a faint ring where the finger landed and a knob under the finger. */
-.touch-stick-ring,
-.touch-stick-knob {
-  position: fixed;
-  left: 0;
-  top: 0;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.touch-stick-ring {
-  box-sizing: border-box;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-}
-
-.touch-stick-knob {
-  background: rgba(255, 255, 255, 0.35);
-}
-
-.touch-stick-ring[hidden],
-.touch-stick-knob[hidden] {
-  display: none;
-}

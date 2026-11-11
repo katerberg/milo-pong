@@ -25,7 +25,7 @@ export const STRENGTH_BOOST_STEP = 1 / 3;
 /** Each speed boost a paddle holds makes the paddle itself move this much faster (stacks). */
 export const SPEED_BOOST_STEP = 1 / 3;
 /** Each size up makes the paddle this many field pixels longer (stacks). */
-export const SIZE_UP_PX = 3;
+export const SIZE_UP_PX = 6;
 /** Frames the CPU holds a slimed ball before letting go. */
 export const CPU_SLIME_HOLD = 30;
 /** How far a turn upgrade tilts the paddle, per key press, in radians. */

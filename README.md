@@ -70,7 +70,7 @@ The lettering is traced from hand drawings and lives as PNGs in `src/assets/end`
 
 ## Credits screen
 
-The **Credits** box in the top-left corner of the title screen (or **C**) opens a black page with the credits in white. The lettering and the **back** word are traced from a hand drawing and live as PNGs in `src/assets/credits`. The **back** bar along the bottom, **Esc** or **Backspace** returns to the title.
+The **Credits** box in the top-left corner of the title screen (or **C**) opens a black page with the credits in white. The lettering and the **back** word are traced from a hand drawing and live as PNGs in `src/assets/credits`. After 5 seconds, the handwritten "Emma" is replaced by Emma's own coloured drawing of her name, in purple and green. The **back** bar along the bottom, **Esc** or **Backspace** returns to the title.
 
 ## CPU
 

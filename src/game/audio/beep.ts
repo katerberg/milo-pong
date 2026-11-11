@@ -23,4 +23,5 @@ export const sfx = {
   score: () => beep(245, 260),
   transform: () => beep(980, 30),
   upgrade: () => beep(740, 300),
+  stick: () => beep(160, 80),
 };

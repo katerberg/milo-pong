@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { H, PH, PW, W } from "../sim/pong";
+import { H, PW, W } from "../sim/pong";
 
 /** Hand-drawn look for the paddles and net. Purely visual: the sim's hit boxes are unchanged. */
 
@@ -7,8 +7,8 @@ const INK = 0x000000;
 const PAPER = 0xffffff;
 const LINE = 0.8; // marker thickness, in field pixels
 
-export const PADDLE_KEY = "sketch-paddle";
 export const NET_KEY = "sketch-net";
+export const SLIME = 0x66f04a;
 
 /** How far the art extends past the hit box on each side (outline is centred on the box edge). */
 export const PAD = 2;
@@ -62,22 +62,36 @@ function strokeLoop(g: Phaser.GameObjects.Graphics, pts: Pt[]): void {
   g.closePath();
 }
 
-/** Bakes the paddle and net textures once at the camera zoom so they stay crisp. */
-export function makeSketchTextures(scene: Phaser.Scene, zoom: number): void {
-  if (scene.textures.exists(PADDLE_KEY)) return;
-  const rnd = mulberry32(7);
-
+/**
+ * Bakes (once) and returns the texture for a paddle of height h, at the camera zoom so it stays
+ * crisp. Slimed paddles are filled green. Same seed per height, so a paddle keeps its wobble.
+ */
+export function paddleTexture(
+  scene: Phaser.Scene,
+  zoom: number,
+  h: number,
+  slime: boolean,
+): string {
+  const key = `sketch-paddle-${h}${slime ? "-slime" : ""}`;
+  if (scene.textures.exists(key)) return key;
   const paddle = scene.make.graphics({}, false);
   paddle.setScale(zoom);
-  const loop = wobblyRect(PAD, PAD, PW, PH, rnd);
-  paddle.fillStyle(PAPER);
+  const loop = wobblyRect(PAD, PAD, PW, h, mulberry32(7 + h));
+  paddle.fillStyle(slime ? SLIME : PAPER);
   strokeLoop(paddle, loop);
   paddle.fillPath();
   paddle.lineStyle(LINE, INK, 1);
   strokeLoop(paddle, loop);
   paddle.strokePath();
-  paddle.generateTexture(PADDLE_KEY, (PW + PAD * 2) * zoom, (PH + PAD * 2) * zoom);
+  paddle.generateTexture(key, (PW + PAD * 2) * zoom, (h + PAD * 2) * zoom);
   paddle.destroy();
+  return key;
+}
+
+/** Bakes the net texture once at the camera zoom so it stays crisp. */
+export function makeSketchTextures(scene: Phaser.Scene, zoom: number): void {
+  if (scene.textures.exists(NET_KEY)) return;
+  const rnd = mulberry32(7);
 
   // Net: a column of hand-drawn dashes, each a little different.
   const net = scene.make.graphics({}, false);

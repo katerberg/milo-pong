@@ -21,7 +21,7 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 ## Controls
 
 - **Start** button, **Space** or **Enter**: start from the title screen
-- **Space** or **Enter**: play again from the win/loss screen · **Esc** or the **back** bar: back to the title
+- **Space**, **Enter**, **Esc** or the **back** bar: back to the title from the win/loss screen
 - **W / S** or **↑ / ↓**: move your (left) paddle
 - **1**: play against the CPU · **2**: two players (left uses W/S, right uses ↑/↓)
 

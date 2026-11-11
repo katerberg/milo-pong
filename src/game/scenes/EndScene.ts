@@ -56,8 +56,8 @@ export class EndScene extends Phaser.Scene {
 
     const keyboard = this.input.keyboard!;
     keyboard.addCapture("SPACE,ENTER,ESC");
-    keyboard.once("keydown-SPACE", () => this.playAgain());
-    keyboard.once("keydown-ENTER", () => this.playAgain());
+    keyboard.once("keydown-SPACE", () => this.toTitle());
+    keyboard.once("keydown-ENTER", () => this.toTitle());
     keyboard.once("keydown-ESC", () => this.toTitle());
   }
 
@@ -103,12 +103,6 @@ export class EndScene extends Phaser.Scene {
       .setOrigin(0)
       .setInteractive({ useHandCursor: true })
       .once("pointerdown", () => this.toTitle());
-  }
-
-  private playAgain(): void {
-    if (!this.scene.isActive()) return;
-    setHelpVisible(this.game, true);
-    this.scene.start("PlayScene", { start: true, twoPlayer: this.result.twoPlayer });
   }
 
   private toTitle(): void {

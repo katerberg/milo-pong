@@ -23,7 +23,9 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 - **Start** button, **Space** or **Enter**: start from the title screen
 - **Space**: restart after a game ends
 - **W / S** or **↑ / ↓**: move your (left) paddle
-- **1**: play against the CPU · **2**: two players (left uses W/S, right uses ↑/↓)
+- **A / D** or **← / →**: tilt your paddle (with the turn upgrade)
+- **Space**: let go of a ball stuck to your paddle (with the slime upgrade)
+- **1**: play against the CPU · **2**: two players. The left player uses W/S, A/D and Space; the right player uses ↑/↓, ←/→ and Enter.
 
 ## Rules (as in the original)
 
@@ -36,13 +38,19 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 
 ## Upgrades
 
-Each side can hold up to **3** upgrades, and they stack. There is one so far.
+Each time an ordinary ball crosses the net for the first time in a rally, it has a 50% chance of turning into an upgrade ball. The upgrade it carries is picked at random, and the ball's drawing shows which one it is. An upgrade ball stays that way until someone scores.
 
-- **Strength boost:** the first time a ball crosses the net in a rally, it has a 50% chance of turning into an upgrade ball, which has a teal cut-out. An upgrade ball stays that way until someone scores.
-  - Scoring with an upgrade ball gives the scorer another upgrade instead of a point, until they hold 3. After that, scoring with an upgrade ball counts as a normal point.
-  - Scoring with an ordinary ball is always a normal point.
-  - Each strength boost held makes that side's hits a third faster: 1.33× with one, 1.67× with two and 2× with three. When the other side hits the ball back, it travels at their own speed.
-  - Small upgrade balls under each score show how many upgrades that side holds. Upgrades reset when a new game starts.
+- Scoring with an upgrade ball gives the scorer that upgrade instead of a point, until they hold **3**. After that, scoring with an upgrade ball counts as a normal point.
+- Scoring with an ordinary ball is always a normal point.
+- Upgrades stack, and any mix is allowed. Small balls under each score show what each side holds. Upgrades reset when a new game starts.
+
+| Upgrade        | Effect                                                                                                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Strength boost | Your hits travel a third faster per boost. When the other side hits the ball back, it travels at their own speed.                                                             |
+| Speed boost    | Your paddle moves a third faster per boost.                                                                                                                                   |
+| Size up        | Your paddle grows 3px longer per boost.                                                                                                                                       |
+| Slime          | Your paddle turns green and sticky: the ball stays on it until you press Space. The CPU lets go after half a second. Extra slime has no further effect.                       |
+| Turn           | A / D (or ← / →) tilts your paddle 45° either way, and a tilted paddle sends the ball off at 45°. Extra turns have no further effect. The CPU picks a random tilt each rally. |
 
 The ball art comes from a hand drawing and lives in `src/assets/play`.
 

@@ -8,12 +8,18 @@ import {
   H,
   newGame,
   P_SPEED,
+  PW,
   PH,
   segmentOf,
   SERVE_DELAY,
   step,
   MAX_UPGRADES,
   STRENGTH_BOOST_STEP,
+  CPU_SLIME_HOLD,
+  paddleHeight,
+  SIZE_UP_PX,
+  SPEED_BOOST_STEP,
+  UPGRADES,
   TOP_GAP,
   VY,
   W,
@@ -72,6 +78,7 @@ describe("pong sim", () => {
       live: true,
       upgrade: null,
       crossedNet: false,
+      stuck: null,
     };
     const events = step(s, idle, rng);
     expect(events).toContain("paddle");
@@ -93,12 +100,14 @@ describe("pong sim", () => {
     const rng = seeded(4);
     const s = createState(rng);
     newGame(s, false);
-    for (let i = 0; i < 1_000_000 && s.phase === "play"; i++) {
+    // Bounded rather than played to the end: a never-missing player with the wrong mix of
+    // upgrades can rally forever against a CPU that also returns everything.
+    for (let i = 0; i < 200_000 && s.phase === "play"; i++) {
       const target = s.ball.y - PH / 2 + (rng() - 0.5) * 12;
       s.left.y = clampPaddle(target);
-      step(s, idle, rng);
+      // Let go of a slimed ball straight away.
+      step(s, { ...idle, leftRelease: true }, rng);
     }
-    expect(s.phase).toBe("over");
     expect(s.left.score).toBeGreaterThan(0);
   });
 
@@ -297,5 +306,127 @@ describe("strength boost upgrade", () => {
     newGame(s, false);
     expect(s.left.upgrades).toEqual([]);
     expect(s.right.upgrades).toEqual([]);
+  });
+});
+
+describe("more upgrades", () => {
+  it("picks which upgrade the ball becomes at random", () => {
+    const s = rally();
+    aim(s, net - 1, 2);
+    const rolls = [0, 0.5];
+    step(s, idle, () => rolls.shift() ?? 0.99);
+    expect(s.ball.upgrade).toBe(UPGRADES[Math.floor(0.5 * UPGRADES.length)]);
+  });
+
+  it("speed boost makes the paddle move a third faster per boost", () => {
+    const s = rally();
+    s.ball.live = false;
+    s.serveTimer = 1000;
+    s.left.upgrades = ["speedBoost"];
+    s.left.y = 60;
+    step(s, { left: 1, right: 0 }, never);
+    expect(s.left.y - 60).toBeCloseTo(P_SPEED * (1 + SPEED_BOOST_STEP));
+  });
+
+  it("size up makes the paddle longer, and the extra length returns the ball", () => {
+    const s = rally();
+    s.left.upgrades = ["sizeUp", "sizeUp"];
+    expect(paddleHeight(s.left)).toBe(PH + 2 * SIZE_UP_PX);
+    s.left.y = 40;
+    // Below where a normal paddle ends, but within the grown one.
+    aim(s, s.left.x + PW + 1, -2);
+    s.ball.y = 40 + PH + 1;
+    expect(step(s, idle, never)).toContain("paddle");
+    expect(s.ball.vx).toBeGreaterThan(0);
+  });
+
+  describe("slime", () => {
+    function caught(): PongState {
+      const s = rally();
+      s.left.upgrades = ["slime"];
+      s.left.y = 40;
+      aim(s, s.left.x + PW + 1, -2);
+      s.ball.y = 45;
+      expect(step(s, idle, never)).toContain("stick");
+      return s;
+    }
+
+    it("catches the ball and carries it with the paddle", () => {
+      const s = caught();
+      expect(s.ball.stuck).not.toBeNull();
+      step(s, { left: 1, right: 0 }, never);
+      step(s, { left: 1, right: 0 }, never);
+      expect(s.ball.y).toBeCloseTo(45 + 2 * P_SPEED);
+      expect(s.ball.vx).toBe(0);
+    });
+
+    it("lets go when the player presses release", () => {
+      const s = caught();
+      step(s, idle, never);
+      expect(s.ball.stuck).not.toBeNull();
+      expect(step(s, { ...idle, leftRelease: true }, never)).toContain("paddle");
+      expect(s.ball.stuck).toBeNull();
+      expect(s.ball.vx).toBeGreaterThan(0);
+    });
+
+    it("the CPU lets go on its own after a moment", () => {
+      const s = rally(false);
+      s.right.upgrades = ["slime"];
+      s.right.y = 40;
+      aim(s, s.right.x - BS - 1, 2);
+      s.ball.y = 45;
+      expect(step(s, idle, never)).toContain("stick");
+      for (let i = 0; i < CPU_SLIME_HOLD - 1; i++) step(s, idle, never);
+      expect(s.ball.stuck).not.toBeNull();
+      step(s, idle, never);
+      expect(s.ball.stuck).toBeNull();
+      expect(s.ball.vx).toBeLessThan(0);
+    });
+  });
+
+  describe("turn", () => {
+    it("does nothing without the upgrade", () => {
+      const s = rally();
+      step(s, { ...idle, leftTurn: 1 }, never);
+      expect(s.left.tilt).toBe(0);
+    });
+
+    it("tilts 45 degrees per press, at most one step each way", () => {
+      const s = rally();
+      s.left.upgrades = ["turn"];
+      step(s, { ...idle, leftTurn: 1 }, never);
+      expect(s.left.tilt).toBe(1);
+      step(s, { ...idle, leftTurn: 1 }, never);
+      expect(s.left.tilt).toBe(1);
+      step(s, { ...idle, leftTurn: -1 }, never);
+      step(s, { ...idle, leftTurn: -1 }, never);
+      expect(s.left.tilt).toBe(-1);
+    });
+
+    it("sends the ball off at 45 degrees in the direction of the tilt", () => {
+      for (const tilt of [-1, 1] as const) {
+        const s = rally();
+        s.left.upgrades = ["turn"];
+        s.left.tilt = tilt;
+        s.left.y = 60;
+        aim(s, s.left.x + PW + 6, -2);
+        s.ball.y = 60 + PH / 2 - BS / 2;
+        for (let i = 0; i < 5 && s.ball.vx < 0; i++) step(s, idle, never);
+        expect(s.ball.vx).toBeGreaterThan(0);
+        expect(s.ball.vy).toBeCloseTo(tilt * s.ball.vx);
+      }
+    });
+
+    it("bounces off the slanted face, not the upright one", () => {
+      const s = rally();
+      s.left.upgrades = ["turn"];
+      s.left.tilt = 1; // top leans toward the court
+      s.left.y = 60;
+      aim(s, s.left.x + PW + 8, -2);
+      s.ball.y = 60; // level with the paddle's upper end
+      for (let i = 0; i < 10 && s.ball.vx < 0; i++) step(s, idle, never);
+      expect(s.ball.vx).toBeGreaterThan(0);
+      expect(s.ball.x).toBeGreaterThan(s.left.x + PW);
+    });
   });
 });

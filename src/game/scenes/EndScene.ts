@@ -25,7 +25,7 @@ const WIN_ART = { word: { x: 25, y: 20 }, plus50: { x: 25, y: 290 }, w: 760, h: 
 const LOSE_ART = { w: 775, h: 440 };
 const BACK_ART_H = 78;
 
-/** Height of the loss screen's "back" bar, as a share of the screen. */
+/** Height of the "back" bar on both end screens, as a share of the screen. */
 const BACK_BAR = 0.15;
 
 export class EndScene extends Phaser.Scene {
@@ -52,6 +52,7 @@ export class EndScene extends Phaser.Scene {
 
     if (lost) this.drawLoss();
     else this.drawWin();
+    this.drawBackBar();
 
     const keyboard = this.input.keyboard!;
     keyboard.addCapture("SPACE,ENTER,ESC");
@@ -62,9 +63,10 @@ export class EndScene extends Phaser.Scene {
 
   private drawWin(): void {
     const { width, height } = this.scale;
-    const scale = Math.min((width * 0.85) / WIN_ART.w, (height * 0.8) / WIN_ART.h);
+    const barTop = height * (1 - BACK_BAR);
+    const scale = Math.min((width * 0.85) / WIN_ART.w, (barTop * 0.85) / WIN_ART.h);
     const left = (width - WIN_ART.w * scale) / 2;
-    const top = (height - WIN_ART.h * scale) / 2;
+    const top = (barTop - WIN_ART.h * scale) / 2;
     const place = (key: string, at: { x: number; y: number }) =>
       this.add
         .image(left + (at.x - WIN_ART.word.x) * scale, top + (at.y - WIN_ART.word.y) * scale, key)
@@ -73,18 +75,20 @@ export class EndScene extends Phaser.Scene {
     place("end-win", WIN_ART.word);
     // The +50 is only a picture for now; it isn't added to anything.
     place("end-plus50", WIN_ART.plus50);
-    // The drawing has no back bar, so a click anywhere goes back to the title.
-    this.input.once("pointerdown", () => this.toTitle());
   }
 
   private drawLoss(): void {
     const { width, height } = this.scale;
     const barTop = height * (1 - BACK_BAR);
-    const barH = height - barTop;
     const scale = Math.min((width * 0.85) / LOSE_ART.w, (barTop * 0.8) / LOSE_ART.h);
     this.add.image(width / 2, barTop / 2, "end-lose").setScale(scale);
+  }
 
-    // The "back" bar along the bottom: white, with a marker line on top.
+  /** The "back" bar along the bottom: white, with a marker line on top. Goes to the title. */
+  private drawBackBar(): void {
+    const { width, height } = this.scale;
+    const barTop = height * (1 - BACK_BAR);
+    const barH = height - barTop;
     this.add
       .graphics()
       .fillStyle(0xffffff)

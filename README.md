@@ -21,7 +21,7 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 ## Controls
 
 - **Start** button, **Space** or **Enter**: start from the title screen
-- **Space** or **Enter**: play again from the win/loss screen · **Esc**, the **back** bar (loss screen) or a click anywhere (win screen): back to the title
+- **Space** or **Enter**: play again from the win/loss screen · **Esc** or the **back** bar: back to the title
 - **W / S** or **↑ / ↓**: move your (left) paddle
 - **1**: play against the CPU · **2**: two players (left uses W/S, right uses ↑/↓)
 
@@ -48,7 +48,7 @@ The ball art comes from a hand drawing and lives in `src/assets/play`.
 
 ## Win and loss screens
 
-The lettering is traced from hand drawings and lives as PNGs in `src/assets/end`. The win screen is purple with "WIN!" and "+50". The +50 is always shown but doesn't count toward anything yet. The loss screen is orange (`#ffa312`) with "Lose!" and a **back** bar along the bottom.
+The lettering is traced from hand drawings and lives as PNGs in `src/assets/end`. The win screen is purple with "WIN!" and "+50". The +50 is always shown but doesn't count toward anything yet. The loss screen is orange (`#ffa312`) with "Lose!". Both have a **back** bar along the bottom that returns to the title.
 
 ## CPU
 

@@ -18,6 +18,7 @@ import {
   VY,
   W,
   WIN,
+  winner,
   type PongInput,
   type PongState,
   type Rng,
@@ -76,6 +77,21 @@ describe("pong sim", () => {
     const events = step(s, idle, rng);
     expect(events).toContain("paddle");
     expect(s.ball.vx).toBeGreaterThan(0);
+  });
+
+  it("the first side to 5 points wins and ends the game", () => {
+    expect(WIN).toBe(5);
+    const rng = seeded(11);
+    const s = createState(rng);
+    newGame(s, false);
+    s.left.score = WIN - 1;
+    expect(winner(s)).toBeNull();
+    s.ball = { x: W - 1, y: 10, vx: 3, vy: 0, live: true, upgrade: null, crossedNet: true };
+    s.right.y = H - PH;
+    step(s, idle, rng);
+    expect(s.left.score).toBe(WIN);
+    expect(winner(s)).toBe("left");
+    expect(s.phase).toBe("over");
   });
 
   it("CPU beats an idle player easily and the game ends", () => {

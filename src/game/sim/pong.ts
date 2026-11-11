@@ -13,7 +13,7 @@ export const AI_LEARN_POINTS = 6;
 export const SPEEDS = [1.5, 2.0, 2.6] as const;
 export const VY = [-3, -2, -1, 0, 0, 1, 2, 3] as const;
 export const SERVE_DELAY = 60;
-/** Chance an ordinary ball turns into an upgrade ball each time it crosses the net. */
+/** Chance an ordinary ball turns into an upgrade ball the first time it crosses the net in a rally. */
 export const UPGRADE_CHANCE = 0.5;
 /** Most upgrades a side can hold. Once full, scoring with an upgrade ball is a normal point. */
 export const MAX_UPGRADES = 3;
@@ -42,6 +42,8 @@ export interface Ball {
   live: boolean;
   /** Scoring with an upgrade ball grants this upgrade instead of a point. */
   upgrade: Upgrade | null;
+  /** Whether the ball has already crossed the net (and rolled for a transform) this rally. */
+  crossedNet: boolean;
 }
 
 export interface PongState {
@@ -68,12 +70,13 @@ export const clampPaddle = (y: number): number => Math.max(TOP_GAP, Math.min(H -
 function centreBall(ball: Ball): void {
   ball.live = false;
   ball.upgrade = null;
+  ball.crossedNet = false;
   ball.x = (W - BS) / 2;
   ball.y = (H - BS) / 2;
 }
 
 export function createState(rng: Rng): PongState {
-  const ball: Ball = { x: 0, y: 0, vx: 0, vy: 0, live: false, upgrade: null };
+  const ball: Ball = { x: 0, y: 0, vx: 0, vy: 0, live: false, upgrade: null, crossedNet: false };
   centreBall(ball);
   return {
     left: { x: 10, y: midY, score: 0, upgrades: [] },
@@ -181,9 +184,12 @@ export function step(state: PongState, input: PongInput, rng: Rng): SimEvent[] {
 
   const net = (W - BS) / 2;
   const crossedNet = (prevX < net && ball.x >= net) || (prevX > net && ball.x <= net);
-  if (crossedNet && ball.upgrade === null && rng() < UPGRADE_CHANCE) {
-    ball.upgrade = "strengthBoost";
-    events.push("transform");
+  if (crossedNet && !ball.crossedNet) {
+    ball.crossedNet = true;
+    if (ball.upgrade === null && rng() < UPGRADE_CHANCE) {
+      ball.upgrade = "strengthBoost";
+      events.push("transform");
+    }
   }
 
   if (ball.y < 0) {

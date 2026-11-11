@@ -29,8 +29,6 @@ const BACK_ART_H = 78;
 const BACK_BAR = 0.15;
 
 export class EndScene extends Phaser.Scene {
-  private result!: EndData;
-
   constructor() {
     super("EndScene");
   }
@@ -43,7 +41,6 @@ export class EndScene extends Phaser.Scene {
   }
 
   create(data: EndData): void {
-    this.result = data;
     const lost = isLoss(data);
     const bg = lost ? LOSS_BG : WIN_BG;
     setHelpVisible(this.game, false);

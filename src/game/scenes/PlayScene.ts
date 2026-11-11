@@ -7,6 +7,8 @@ import ballStrengthUrl from "../../assets/play/ball-strength.png";
 import ballTurnUrl from "../../assets/play/ball-turn.png";
 import ballUrl from "../../assets/play/ball.png";
 import { sfx } from "../audio/beep";
+import { createTouchStick } from "../input/touchControls";
+import type { StickDirection } from "../input/touchStick";
 import { startingUpgradesFromUrl } from "../sim/debugFlags";
 import type { EndData } from "./EndScene";
 import {
@@ -93,6 +95,8 @@ export class PlayScene extends Phaser.Scene {
   private shots: Phaser.GameObjects.Image[] = [];
   private badges!: { left: Phaser.GameObjects.Image[]; right: Phaser.GameObjects.Image[] };
   private keys!: Keys;
+  /** Dot-Man style touch stick: up/down moves your paddle, left/right tilts it. */
+  private readTouch: () => StickDirection | null = () => null;
   private presses = noPresses();
   private acc = 0;
   private ending = false;
@@ -156,10 +160,21 @@ export class PlayScene extends Phaser.Scene {
     keyboard.on("keydown-TWO", () => {
       if (!this.ending) newGame(this.state, true, this.startUpgrades);
     });
-    keyboard.on("keydown-SPACE", () => {
-      if (this.state.phase === "attract") newGame(this.state, false, this.startUpgrades);
-      else p.leftAction = true;
+    keyboard.on("keydown-SPACE", () => this.leftAction());
+    // Touch: drag to move (and sideways to tilt), tap for Space.
+    this.readTouch = createTouchStick(this, {
+      onTap: () => this.leftAction(),
+      onDirection: (direction) => {
+        if (direction === "left") p.leftTurn -= 1;
+        if (direction === "right") p.leftTurn += 1;
+      },
     });
+  }
+
+  /** Space, or a tap: start from attract mode, or else let go of slime / fire the cannon. */
+  private leftAction(): void {
+    if (this.state.phase === "attract") newGame(this.state, false, this.startUpgrades);
+    else this.presses.leftAction = true;
   }
 
   update(_time: number, delta: number): void {
@@ -176,8 +191,12 @@ export class PlayScene extends Phaser.Scene {
     const axis = (neg: boolean, pos: boolean): Dir => ((pos ? 1 : 0) - (neg ? 1 : 0)) as Dir;
     const two = this.state.twoPlayer;
     const p = this.presses;
+    const touch = this.readTouch();
     const input = {
-      left: axis(k.w.isDown || (!two && k.up.isDown), k.s.isDown || (!two && k.down.isDown)),
+      left: axis(
+        k.w.isDown || (!two && k.up.isDown) || touch === "up",
+        k.s.isDown || (!two && k.down.isDown) || touch === "down",
+      ),
       right: axis(k.up.isDown, k.down.isDown),
       leftTurn: Math.sign(p.leftTurn) as Dir,
       rightTurn: Math.sign(p.rightTurn) as Dir,

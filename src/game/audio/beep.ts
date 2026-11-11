@@ -1,5 +1,28 @@
 let context: AudioContext | undefined;
 
+/**
+ * Phone browsers keep audio muted until it is started from a touch or key press, so the
+ * first one creates (or wakes) the context before any blip needs it.
+ */
+export function unlockAudioOnFirstInput(): void {
+  const unlock = (): void => {
+    try {
+      context ??= new AudioContext();
+      if (context.state === "suspended") void context.resume();
+    } catch {
+      return;
+    }
+    if (context.state === "running") {
+      for (const type of ["touchend", "pointerdown", "keydown"]) {
+        window.removeEventListener(type, unlock, true);
+      }
+    }
+  };
+  for (const type of ["touchend", "pointerdown", "keydown"]) {
+    window.addEventListener(type, unlock, true);
+  }
+}
+
 function beep(freq: number, ms: number): void {
   try {
     context ??= new AudioContext();

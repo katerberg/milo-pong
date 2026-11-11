@@ -16,7 +16,7 @@ npm run dev       # local dev server
 npm run verify    # tests, typecheck, lint, format check and build
 ```
 
-The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and is covered by Vitest tests. `src/game/scenes/PlayScene.ts` reads the keyboard and draws the game.
+The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and is covered by Vitest tests. `src/game/scenes/PlayScene.ts` reads the keyboard and touch and draws the game. The touch stick lives in `src/game/input`.
 
 ## Controls
 
@@ -26,6 +26,16 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 - **A / D** or **← / →**: tilt your paddle (with the turn upgrade)
 - **Space**: let go of a ball stuck to your paddle (with the slime upgrade), or else fire your cannon (with the cannon upgrade)
 - **1**: play against the CPU · **2**: two players. The left player uses W/S, A/D and Space; the right player uses ↑/↓, ←/→ and Enter.
+
+### Phones and tablets
+
+Touch uses the same scheme as Dot-Man: put a finger down anywhere (the margins around the game count too) and drag. A faint ring shows where the finger landed.
+
+- **Drag up / down**: move your (left) paddle. It keeps moving while you hold the drag.
+- **Drag left / right**: tilt your paddle (with the turn upgrade), once per swipe.
+- **Tap**: the same as Space. It starts the game from the title screen, lets go of a slimed ball or fires the cannon, and returns to the title from the win/loss screen. A finger that never leaves the stick's deadzone counts as a tap, and so does a second finger put down while you're dragging.
+
+Two-player mode needs a keyboard.
 
 ## Rules (as in the original, except the winning score)
 

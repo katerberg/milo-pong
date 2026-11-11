@@ -6,6 +6,7 @@ import ballStrengthUrl from "../../assets/play/ball-strength.png";
 import ballTurnUrl from "../../assets/play/ball-turn.png";
 import ballUrl from "../../assets/play/ball.png";
 import { sfx } from "../audio/beep";
+import type { EndData } from "./EndScene";
 import { makeSketchTextures, NET_KEY, NET_X, paddleTexture } from "./sketch";
 import {
   BS,
@@ -17,6 +18,7 @@ import {
   TILT_ANGLE,
   upgradeCount,
   W,
+  winner,
   H,
   MAX_UPGRADES,
   type Dir,
@@ -35,6 +37,8 @@ const UPGRADE_BALLS: Record<Upgrade, { key: string; url: string }> = {
 };
 
 const STEP_MS = 1000 / 60;
+/** Pause on the final score before switching to the win or loss screen. */
+const END_DELAY_MS = 1200;
 
 /** The game renders at ZOOM x the 200 x 150 field so the title art stays smooth. */
 export const ZOOM = 4;
@@ -76,6 +80,7 @@ export class PlayScene extends Phaser.Scene {
   private keys!: Keys;
   private presses = noPresses();
   private acc = 0;
+  private ending = false;
   private readonly rng = () => Math.random();
 
   constructor() {
@@ -87,9 +92,11 @@ export class PlayScene extends Phaser.Scene {
     for (const { key, url } of Object.values(UPGRADE_BALLS)) this.load.image(key, url);
   }
 
-  create(data: { start?: boolean } = {}): void {
+  create(data: { start?: boolean; twoPlayer?: boolean } = {}): void {
     this.state = createState(this.rng);
-    if (data.start) newGame(this.state, false);
+    this.acc = 0;
+    this.ending = false;
+    if (data.start) newGame(this.state, data.twoPlayer ?? false);
     this.cameras.main.setZoom(ZOOM).centerOn(W / 2, H / 2);
     makeSketchTextures(this, ZOOM);
     this.add
@@ -125,10 +132,14 @@ export class PlayScene extends Phaser.Scene {
     keyboard.on("keydown-LEFT", () => (solo() ? (p.leftTurn -= 1) : (p.rightTurn -= 1)));
     keyboard.on("keydown-RIGHT", () => (solo() ? (p.leftTurn += 1) : (p.rightTurn += 1)));
     keyboard.on("keydown-ENTER", () => (p.rightRelease = !solo()));
-    keyboard.on("keydown-ONE", () => newGame(this.state, false));
-    keyboard.on("keydown-TWO", () => newGame(this.state, true));
+    keyboard.on("keydown-ONE", () => {
+      if (!this.ending) newGame(this.state, false);
+    });
+    keyboard.on("keydown-TWO", () => {
+      if (!this.ending) newGame(this.state, true);
+    });
     keyboard.on("keydown-SPACE", () => {
-      if (this.state.phase !== "play") newGame(this.state, false);
+      if (this.state.phase === "attract") newGame(this.state, false);
       else p.leftRelease = true;
     });
   }
@@ -157,6 +168,15 @@ export class PlayScene extends Phaser.Scene {
     };
     Object.assign(p, noPresses());
     for (const event of step(this.state, input, this.rng)) sfx[event]();
+    if (this.state.phase === "over" && !this.ending) this.endGame();
+  }
+
+  private endGame(): void {
+    const side = winner(this.state);
+    if (side === null) return;
+    this.ending = true;
+    const result: EndData = { winner: side, twoPlayer: this.state.twoPlayer };
+    this.time.delayedCall(END_DELAY_MS, () => this.scene.start("EndScene", result));
   }
 
   private draw(): void {

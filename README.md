@@ -38,7 +38,7 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 
 Each side can hold up to **3** upgrades, and they stack. There is one so far.
 
-- **Strength boost:** each time an ordinary ball crosses the net, it has a 50% chance of turning into an upgrade ball, which has a teal cut-out. An upgrade ball stays that way until someone scores.
+- **Strength boost:** the first time a ball crosses the net in a rally, it has a 50% chance of turning into an upgrade ball, which has a teal cut-out. An upgrade ball stays that way until someone scores.
   - Scoring with an upgrade ball gives the scorer another upgrade instead of a point, until they hold 3. After that, scoring with an upgrade ball counts as a normal point.
   - Scoring with an ordinary ball is always a normal point.
   - Each strength boost held makes that side's hits a third faster: 1.33× with one, 1.67× with two and 2× with three. When the other side hits the ball back, it travels at their own speed.

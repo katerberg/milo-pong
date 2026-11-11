@@ -71,6 +71,7 @@ describe("pong sim", () => {
       vy: 0,
       live: true,
       upgrade: null,
+      crossedNet: false,
     };
     const events = step(s, idle, rng);
     expect(events).toContain("paddle");
@@ -181,6 +182,15 @@ describe("strength boost upgrade", () => {
     const counting: Rng = () => (rolls++, 0);
     expect(step(s, idle, counting)).not.toContain("transform");
     expect(rolls).toBe(0);
+  });
+
+  it("only rolls on the first crossing of the net", () => {
+    const s = rally();
+    aim(s, net - 1, 2);
+    expect(step(s, idle, never)).not.toContain("transform");
+    aim(s, net + 1, -2);
+    expect(step(s, idle, always)).not.toContain("transform");
+    expect(s.ball.upgrade).toBeNull();
   });
 
   it("does not count a serve from the net as a crossing", () => {

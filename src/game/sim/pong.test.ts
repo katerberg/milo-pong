@@ -12,11 +12,13 @@ import {
   segmentOf,
   SERVE_DELAY,
   step,
+  STRENGTH_BOOST,
   TOP_GAP,
   VY,
   W,
   WIN,
   type PongInput,
+  type PongState,
   type Rng,
 } from "./pong";
 
@@ -61,7 +63,14 @@ describe("pong sim", () => {
     const rng = seeded(2);
     const s = createState(rng);
     newGame(s, true);
-    s.ball = { x: s.left.x + 4, y: s.left.y + PH / 2 - BS / 2, vx: -2, vy: 0, live: true };
+    s.ball = {
+      x: s.left.x + 4,
+      y: s.left.y + PH / 2 - BS / 2,
+      vx: -2,
+      vy: 0,
+      live: true,
+      upgrade: null,
+    };
     const events = step(s, idle, rng);
     expect(events).toContain("paddle");
     expect(s.ball.vx).toBeGreaterThan(0);
@@ -126,5 +135,118 @@ describe("pong sim", () => {
       expect(s.ball.y).toBeLessThanOrEqual(H - BS);
       expect(s.ball.x).toBeLessThan(W + 10);
     }
+  });
+});
+
+const always: Rng = () => 0;
+const never: Rng = () => 0.99;
+
+function rally(twoPlayer = true): PongState {
+  const s = createState(never);
+  newGame(s, twoPlayer);
+  s.ball.live = true;
+  return s;
+}
+
+function aim(s: PongState, x: number, vx: number): void {
+  s.ball.x = x;
+  s.ball.y = 20;
+  s.ball.vx = vx;
+  s.ball.vy = 0;
+}
+
+const net = (W - BS) / 2;
+
+describe("strength boost upgrade", () => {
+  it("can turn the ball into an upgrade ball as it crosses the net", () => {
+    const s = rally();
+    aim(s, net - 1, 2);
+    expect(step(s, idle, always)).toContain("transform");
+    expect(s.ball.upgrade).toBe("strengthBoost");
+  });
+
+  it("leaves the ball alone on the other half of the 50% roll", () => {
+    const s = rally();
+    aim(s, net + 1, -2);
+    expect(step(s, idle, never)).not.toContain("transform");
+    expect(s.ball.upgrade).toBeNull();
+  });
+
+  it("does not roll again once the ball has transformed", () => {
+    const s = rally();
+    s.ball.upgrade = "strengthBoost";
+    aim(s, net - 1, 2);
+    let rolls = 0;
+    const counting: Rng = () => (rolls++, 0);
+    expect(step(s, idle, counting)).not.toContain("transform");
+    expect(rolls).toBe(0);
+  });
+
+  it("does not count a serve from the net as a crossing", () => {
+    const s = rally();
+    aim(s, net, 2);
+    expect(step(s, idle, always)).not.toContain("transform");
+  });
+
+  it("gives the scorer the upgrade instead of a point, then serves a regular ball", () => {
+    const s = rally();
+    s.ball.upgrade = "strengthBoost";
+    aim(s, W - 1, 3);
+    s.right.y = H - PH;
+    const events = step(s, idle, never);
+    expect(events).toContain("upgrade");
+    expect(events).not.toContain("score");
+    expect(s.left.score).toBe(0);
+    expect(s.left.upgrade).toBe("strengthBoost");
+    expect(s.ball.upgrade).toBeNull();
+  });
+
+  it("gives the opponent the upgrade when they score with the upgrade ball", () => {
+    const s = rally();
+    s.ball.upgrade = "strengthBoost";
+    aim(s, 1 - BS, -3);
+    s.left.y = H - PH;
+    expect(step(s, idle, never)).toContain("upgrade");
+    expect(s.right.upgrade).toBe("strengthBoost");
+    expect(s.right.score).toBe(0);
+  });
+
+  it("counts a point when the scorer already holds an upgrade", () => {
+    const s = rally();
+    s.left.upgrade = "strengthBoost";
+    s.ball.upgrade = "strengthBoost";
+    aim(s, W - 1, 3);
+    s.right.y = H - PH;
+    expect(step(s, idle, never)).toContain("score");
+    expect(s.left.score).toBe(1);
+  });
+
+  it("sends the ball back 33% faster off a boosted paddle, and at normal speed off the other", () => {
+    const s = rally();
+    s.left.upgrade = "strengthBoost";
+    s.left.y = 20;
+    s.right.y = 20;
+    s.ball.y = s.left.y + 1;
+    s.ball.x = s.left.x + 4;
+    s.ball.vx = -2;
+    s.ball.vy = 0;
+    step(s, idle, never);
+    const boosted = Math.abs(s.ball.vx);
+    expect(boosted).toBeCloseTo(ballSpeed(s.hits) * STRENGTH_BOOST);
+
+    s.ball.x = s.right.x - BS - 1;
+    s.ball.y = s.right.y + 1;
+    s.ball.vx = 2;
+    step(s, idle, never);
+    expect(Math.abs(s.ball.vx)).toBeCloseTo(ballSpeed(s.hits));
+  });
+
+  it("clears upgrades for a new game", () => {
+    const s = rally();
+    s.left.upgrade = "strengthBoost";
+    s.right.upgrade = "strengthBoost";
+    newGame(s, false);
+    expect(s.left.upgrade).toBeNull();
+    expect(s.right.upgrade).toBeNull();
   });
 });

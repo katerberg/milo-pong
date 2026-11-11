@@ -34,6 +34,17 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 - Paddles **can't reach the very top** of the screen. This copies the quirk in the original hardware.
 - The game uses square-wave blips: one for a paddle hit, a lower one for a wall bounce and a long tone for a point.
 
+## Upgrades
+
+Each side can hold one upgrade at a time. There is one so far.
+
+- **Strength boost:** each time an ordinary ball crosses the net, it has a 50% chance of turning into an upgrade ball, which has a teal cut-out. An upgrade ball stays that way until someone scores.
+  - Scoring with an upgrade ball gives the scorer the strength boost instead of a point. If the scorer already holds an upgrade, it counts as a normal point.
+  - Balls hit by a boosted paddle travel 33% faster. When the other side hits the ball back, it returns to normal speed.
+  - A small upgrade ball under a side's score shows that it holds the boost. Upgrades reset when a new game starts.
+
+The ball art comes from a hand drawing and lives in `src/assets/play`.
+
 ## CPU
 
 The original arcade game was two-player only. The CPU here is a simple tracker from that era. It follows the ball only once the ball is coming toward it and past its reaction line, always moves more slowly than you can, and aims a little off-centre each rally. It starts a game slow and sloppy, so a first point is within reach, then gets quicker, reacts sooner and aims better with each point you win (up to 6). It can be beaten with steep, fast shots and with shots along the top edge.

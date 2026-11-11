@@ -1,23 +1,32 @@
 import Phaser from "phaser";
+import backUrl from "../../assets/end/back.png";
+import loseUrl from "../../assets/end/lose.png";
+import plus50Url from "../../assets/end/plus50.png";
+import winUrl from "../../assets/end/win.png";
 import { setHelpVisible } from "../help";
-import { START_FONT, TITLE_BG } from "./StartScene";
 
-/** Background for the loss screen: a dusky red in place of the title blue. */
-export const LOSS_BG = 0x8c2a2a;
+/** Purple crayon behind the win screen. */
+export const WIN_BG = 0x7b3fa0;
+/** Orange behind the loss screen. */
+export const LOSS_BG = 0xffa312;
 
 export interface EndData {
   /** The side that reached the winning score. */
   winner: "left" | "right";
-  leftScore: number;
-  rightScore: number;
   twoPlayer: boolean;
 }
 
-/** Headline for the end screen. Against the CPU you play the left paddle. */
-export function endTitle({ winner, twoPlayer }: Pick<EndData, "winner" | "twoPlayer">): string {
-  if (twoPlayer) return winner === "left" ? "Left player wins!" : "Right player wins!";
-  return winner === "left" ? "You win!" : "You lose!";
-}
+/** Against the CPU you play the left paddle; in two-player mode somebody always won. */
+export const isLoss = ({ winner, twoPlayer }: EndData): boolean => !twoPlayer && winner === "right";
+
+// Where each piece sat in the traced drawing (pixels of the cropped photo), so the
+// lettering keeps the drawing's layout.
+const WIN_ART = { word: { x: 25, y: 20 }, plus50: { x: 25, y: 290 }, w: 760, h: 490 };
+const LOSE_ART = { w: 775, h: 440 };
+const BACK_ART_H = 78;
+
+/** Height of the loss screen's "back" bar, as a share of the screen. */
+const BACK_BAR = 0.15;
 
 export class EndScene extends Phaser.Scene {
   private result!: EndData;
@@ -26,29 +35,23 @@ export class EndScene extends Phaser.Scene {
     super("EndScene");
   }
 
+  preload(): void {
+    this.load.image("end-win", winUrl);
+    this.load.image("end-plus50", plus50Url);
+    this.load.image("end-lose", loseUrl);
+    this.load.image("end-back", backUrl);
+  }
+
   create(data: EndData): void {
     this.result = data;
+    const lost = isLoss(data);
+    const bg = lost ? LOSS_BG : WIN_BG;
     setHelpVisible(this.game, false);
-    const lost = !data.twoPlayer && data.winner === "right";
-    this.cameras.main.setBackgroundColor(lost ? LOSS_BG : TITLE_BG);
-    document.body.style.background = `#${(lost ? LOSS_BG : TITLE_BG).toString(16).padStart(6, "0")}`;
+    this.cameras.main.setBackgroundColor(bg);
+    document.body.style.background = `#${bg.toString(16).padStart(6, "0")}`;
 
-    const { width, height } = this.scale;
-    const text = (y: number, label: string, size: number, color = "#ffffff") =>
-      this.add
-        .text(width / 2, y, label, {
-          fontFamily: START_FONT,
-          fontSize: `${size}px`,
-          color,
-          // Phaser under-measures this font's ascent; padding keeps the glyph tops unclipped.
-          padding: { x: 12, y: 24 },
-        })
-        .setOrigin(0.5);
-
-    text(height * 0.27, endTitle(data), 110).setAngle(-3);
-    text(height * 0.5, `${data.leftScore} – ${data.rightScore}`, 72);
-    this.addButton(width / 2, height * 0.72);
-    text(height * 0.92, "Space: play again · Esc: title", 28, "#ffffffcc");
+    if (lost) this.drawLoss();
+    else this.drawWin();
 
     const keyboard = this.input.keyboard!;
     keyboard.addCapture("SPACE,ENTER,ESC");
@@ -57,24 +60,45 @@ export class EndScene extends Phaser.Scene {
     keyboard.once("keydown-ESC", () => this.toTitle());
   }
 
-  private addButton(x: number, y: number): void {
-    // The hand-drawn box from the title screen; its texture is loaded by StartScene.
-    const image = this.add.image(x, y, "title-button");
-    const label = this.add
-      .text(x, y, "Play again", {
-        fontFamily: START_FONT,
-        fontSize: "54px",
-        color: "#000000",
-        padding: { x: 12, y: 24 },
-      })
-      .setOrigin(0.5)
-      .setAngle(-4);
-    // Stretch the box to fit the label; the label's padding is the margin.
-    image.setDisplaySize(label.width + 64, label.height * 1.2);
-    label.setInteractive({ useHandCursor: true });
-    image.setInteractive({ useHandCursor: true, pixelPerfect: true });
-    label.once("pointerdown", () => this.playAgain());
-    image.once("pointerdown", () => this.playAgain());
+  private drawWin(): void {
+    const { width, height } = this.scale;
+    const scale = Math.min((width * 0.85) / WIN_ART.w, (height * 0.8) / WIN_ART.h);
+    const left = (width - WIN_ART.w * scale) / 2;
+    const top = (height - WIN_ART.h * scale) / 2;
+    const place = (key: string, at: { x: number; y: number }) =>
+      this.add
+        .image(left + (at.x - WIN_ART.word.x) * scale, top + (at.y - WIN_ART.word.y) * scale, key)
+        .setOrigin(0)
+        .setScale(scale);
+    place("end-win", WIN_ART.word);
+    // The +50 is only a picture for now; it isn't added to anything.
+    place("end-plus50", WIN_ART.plus50);
+    // The drawing has no back bar, so a click anywhere goes back to the title.
+    this.input.once("pointerdown", () => this.toTitle());
+  }
+
+  private drawLoss(): void {
+    const { width, height } = this.scale;
+    const barTop = height * (1 - BACK_BAR);
+    const barH = height - barTop;
+    const scale = Math.min((width * 0.85) / LOSE_ART.w, (barTop * 0.8) / LOSE_ART.h);
+    this.add.image(width / 2, barTop / 2, "end-lose").setScale(scale);
+
+    // The "back" bar along the bottom: white, with a marker line on top.
+    this.add
+      .graphics()
+      .fillStyle(0xffffff)
+      .fillRect(0, barTop, width, barH)
+      .lineStyle(5, 0x1a1a1a)
+      .lineBetween(0, barTop, width, barTop);
+    this.add
+      .image(width / 2, barTop + barH / 2, "end-back")
+      .setScale(Math.min(1, (barH * 0.7) / BACK_ART_H));
+    this.add
+      .zone(0, barTop, width, barH)
+      .setOrigin(0)
+      .setInteractive({ useHandCursor: true })
+      .once("pointerdown", () => this.toTitle());
   }
 
   private playAgain(): void {

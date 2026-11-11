@@ -130,13 +130,7 @@ export class PlayScene extends Phaser.Scene {
     const side = winner(this.state);
     if (side === null) return;
     this.ending = true;
-    const { left, right, twoPlayer } = this.state;
-    const result: EndData = {
-      winner: side,
-      leftScore: left.score,
-      rightScore: right.score,
-      twoPlayer,
-    };
+    const result: EndData = { winner: side, twoPlayer: this.state.twoPlayer };
     this.time.delayedCall(END_DELAY_MS, () => this.scene.start("EndScene", result));
   }
 

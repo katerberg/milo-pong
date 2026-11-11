@@ -21,13 +21,13 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 ## Controls
 
 - **Start** button, **Space** or **Enter**: start from the title screen
-- **Play again** button, **Space** or **Enter**: play again from the win/loss screen · **Esc**: back to the title
+- **Space** or **Enter**: play again from the win/loss screen · **Esc**, the **back** bar (loss screen) or a click anywhere (win screen): back to the title
 - **W / S** or **↑ / ↓**: move your (left) paddle
 - **1**: play against the CPU · **2**: two players (left uses W/S, right uses ↑/↓)
 
 ## Rules (as in the original, except the winning score)
 
-- First to **5** wins. The game then shows a win screen (blue) or a loss screen (red) with the final score. In two-player mode it says which side won.
+- First to **5** wins. The game then shows a win screen or a loss screen (in two-player mode, always the win screen).
 - Each paddle has **8 segments**. The middle two send the ball back flat, and the outer ones send it back at steeper angles.
 - The ball **speeds up** after 4 and after 12 returns. Its speed resets when someone scores.
 - After a point, the ball is served from the centre toward the player who missed.
@@ -45,6 +45,10 @@ Each side can hold up to **3** upgrades, and they stack. There is one so far.
   - Small upgrade balls under each score show how many upgrades that side holds. Upgrades reset when a new game starts.
 
 The ball art comes from a hand drawing and lives in `src/assets/play`.
+
+## Win and loss screens
+
+The lettering is traced from hand drawings and lives as PNGs in `src/assets/end`. The win screen is purple with "WIN!" and "+50". The +50 is always shown but doesn't count toward anything yet. The loss screen is orange (`#ffa312`) with "Lose!" and a **back** bar along the bottom.
 
 ## CPU
 

@@ -1,6 +1,7 @@
 import "@fontsource/gochi-hand";
 import Phaser from "phaser";
 import { initAnalytics } from "./analytics";
+import { unlockAudioOnFirstInput } from "./game/audio/beep";
 import { gameConfig } from "./game/config";
 import { START_FONT } from "./game/scenes/StartScene";
 import "./styles.css";
@@ -12,6 +13,7 @@ declare global {
 }
 
 initAnalytics();
+unlockAudioOnFirstInput();
 
 // Wait for the handwriting font so the Start label is measured with the right glyphs.
 void document.fonts

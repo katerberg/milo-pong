@@ -4,6 +4,7 @@ import loseUrl from "../../assets/end/lose.png";
 import plus50Url from "../../assets/end/plus50.png";
 import winUrl from "../../assets/end/win.png";
 import { setHelpVisible } from "../help";
+import { onScreenTap } from "../input/touchControls";
 
 /** Purple crayon behind the win screen. */
 export const WIN_BG = 0x7b3fa0;
@@ -27,10 +28,10 @@ const BACK_ART_H = 78;
 
 /** Height of the "back" bar on both end screens, as a share of the screen. */
 const BACK_BAR = 0.15;
+/** Taps that land this soon after the screen appears are still meant for the game. */
+const TAP_GRACE_MS = 600;
 
 export class EndScene extends Phaser.Scene {
-  private result!: EndData;
-
   constructor() {
     super("EndScene");
   }
@@ -43,7 +44,6 @@ export class EndScene extends Phaser.Scene {
   }
 
   create(data: EndData): void {
-    this.result = data;
     const lost = isLoss(data);
     const bg = lost ? LOSS_BG : WIN_BG;
     setHelpVisible(this.game, false);
@@ -59,6 +59,8 @@ export class EndScene extends Phaser.Scene {
     keyboard.once("keydown-SPACE", () => this.toTitle());
     keyboard.once("keydown-ENTER", () => this.toTitle());
     keyboard.once("keydown-ESC", () => this.toTitle());
+    // A tap anywhere reads as Space, once the grace period has passed.
+    this.time.delayedCall(TAP_GRACE_MS, () => onScreenTap(this, () => this.toTitle()));
   }
 
   private drawWin(): void {

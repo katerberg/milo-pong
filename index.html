@@ -2,14 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>Ping</title>
   </head>
   <body>
     <div id="game-container"></div>
     <p id="help" hidden>
-      START / SPACE begin · W/S or ↑/↓ move · A/D or ←/→ turn · SPACE let go of slime / fire cannon
-      · 1 vs CPU · 2 two players (W/S A/D SPACE vs ↑/↓ ←/→ ENTER)
+      <span class="keys-help">
+        START / SPACE begin · W/S or ↑/↓ move · A/D or ←/→ turn · SPACE let go of slime / fire
+        cannon · 1 vs CPU · 2 two players (W/S A/D SPACE vs ↑/↓ ←/→ ENTER)
+      </span>
+      <span class="touch-help">
+        drag up/down to move · drag sideways to turn · tap to let go of slime / fire cannon
+      </span>
     </p>
     <script type="module" src="/src/main.ts"></script>
   </body>

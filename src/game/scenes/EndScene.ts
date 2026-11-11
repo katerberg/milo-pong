@@ -3,6 +3,7 @@ import backUrl from "../../assets/end/back.png";
 import loseUrl from "../../assets/end/lose.png";
 import plus50Url from "../../assets/end/plus50.png";
 import winUrl from "../../assets/end/win.png";
+import { extendBackBar } from "../backBarSides";
 import { setHelpVisible } from "../help";
 import { onScreenTap } from "../input/touchControls";
 
@@ -105,6 +106,12 @@ export class EndScene extends Phaser.Scene {
       .setOrigin(0)
       .setInteractive({ useHandCursor: true })
       .once("pointerdown", () => this.toTitle());
+    extendBackBar(this, {
+      barShare: BACK_BAR,
+      fill: "#ffffff",
+      line: "#1a1a1a",
+      onClick: () => this.toTitle(),
+    });
   }
 
   private toTitle(): void {

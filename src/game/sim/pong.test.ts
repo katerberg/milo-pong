@@ -16,6 +16,7 @@ import {
   MAX_UPGRADES,
   STRENGTH_BOOST_STEP,
   CPU_SLIME_HOLD,
+  SHOT_SIZE,
   paddleHeight,
   SIZE_UP_PX,
   SPEED_BOOST_STEP,
@@ -452,6 +453,87 @@ describe("more upgrades", () => {
       for (let i = 0; i < 10 && s.ball.vx < 0; i++) step(s, idle, never);
       expect(s.ball.vx).toBeGreaterThan(0);
       expect(s.ball.x).toBeGreaterThan(s.left.x + PW);
+    });
+  });
+
+  describe("cannon", () => {
+    function armed(): PongState {
+      const s = rally();
+      s.left.upgrades = ["sizeUp", "cannon"];
+      s.left.y = 60;
+      s.right.y = 10; // out of the shot's path
+      aim(s, net, 1);
+      return s;
+    }
+
+    it("fires a straight shot and uses up the upgrade", () => {
+      const s = armed();
+      expect(step(s, { ...idle, leftFire: true }, never)).toContain("fire");
+      expect(s.left.upgrades).toEqual(["sizeUp"]);
+      expect(s.shots).toHaveLength(1);
+      const shot = s.shots[0];
+      expect(shot.vx).toBeGreaterThan(0);
+      expect(shot.y + SHOT_SIZE / 2).toBeCloseTo(s.left.y + paddleHeight(s.left) / 2);
+      const y = shot.y;
+      step(s, idle, never);
+      expect(s.shots[0].y).toBe(y);
+    });
+
+    it("does nothing without the upgrade", () => {
+      const s = rally();
+      expect(step(s, { ...idle, leftFire: true }, never)).not.toContain("fire");
+      expect(s.shots).toHaveLength(0);
+    });
+
+    it("scores a point when the shot gets past the other paddle", () => {
+      const s = armed();
+      step(s, { ...idle, leftFire: true }, never);
+      const events: string[] = [];
+      for (let i = 0; i < 200 && s.shots.length > 0; i++) {
+        s.ball.live = false; // keep the main ball out of the way
+        s.serveTimer = 99;
+        events.push(...step(s, idle, never));
+      }
+      expect(s.shots).toHaveLength(0);
+      expect(events).toContain("score");
+      expect(s.left.score).toBe(1);
+    });
+
+    it("dissolves on the other paddle without bouncing back", () => {
+      const s = armed();
+      s.right.y = s.left.y;
+      step(s, { ...idle, leftFire: true }, never);
+      const events: string[] = [];
+      for (let i = 0; i < 200 && s.shots.length > 0; i++) {
+        s.ball.live = false;
+        s.serveTimer = 99;
+        events.push(...step(s, idle, never));
+      }
+      expect(events).toContain("dissolve");
+      expect(events).not.toContain("score");
+      expect(s.left.score).toBe(0);
+    });
+
+    it("lets go of a slimed ball instead of firing", () => {
+      const s = rally();
+      s.left.upgrades = ["slime", "cannon"];
+      s.left.y = 40;
+      aim(s, s.left.x + PW + 1, -2);
+      s.ball.y = 45;
+      step(s, idle, never);
+      const events = step(s, { ...idle, leftRelease: true, leftFire: true }, never);
+      expect(events).toContain("paddle");
+      expect(events).not.toContain("fire");
+      expect(s.left.upgrades).toContain("cannon");
+    });
+
+    it("the CPU fires while the ball heads back to the player", () => {
+      const s = rally(false);
+      s.right.upgrades = ["cannon"];
+      aim(s, W / 2, -2);
+      expect(step(s, idle, always)).toContain("fire");
+      expect(s.right.upgrades).toEqual([]);
+      expect(s.shots[0].vx).toBeLessThan(0);
     });
   });
 });

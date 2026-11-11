@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import ballCannonUrl from "../../assets/play/ball-cannon.png";
 import ballSizeUrl from "../../assets/play/ball-size.png";
 import ballSlimeUrl from "../../assets/play/ball-slime.png";
 import ballSpeedUrl from "../../assets/play/ball-speed.png";
@@ -8,13 +9,21 @@ import ballUrl from "../../assets/play/ball.png";
 import { sfx } from "../audio/beep";
 import { startingUpgradesFromUrl } from "../sim/debugFlags";
 import type { EndData } from "./EndScene";
-import { makeSketchTextures, NET_KEY, NET_X, paddleTexture } from "./sketch";
+import {
+  makeSketchTextures,
+  NET_KEY,
+  NET_X,
+  PAD,
+  paddleTexture,
+  paddleTextureWidth,
+} from "./sketch";
 import {
   BS,
   createState,
   newGame,
   paddleHeight,
   PW,
+  SHOT_SIZE,
   step,
   TILT_ANGLE,
   upgradeCount,
@@ -35,6 +44,7 @@ const UPGRADE_BALLS: Record<Upgrade, { key: string; url: string }> = {
   sizeUp: { key: "ball-size", url: ballSizeUrl },
   slime: { key: "ball-slime", url: ballSlimeUrl },
   turn: { key: "ball-turn", url: ballTurnUrl },
+  cannon: { key: "ball-cannon", url: ballCannonUrl },
 };
 
 const STEP_MS = 1000 / 60;
@@ -59,13 +69,16 @@ const DIGITS = [
 
 type Keys = Record<"w" | "s" | "up" | "down", Phaser.Input.Keyboard.Key>;
 
-/** One-shot presses, queued from keydown events so quick taps between frames aren't lost. */
-type Presses = { leftTurn: number; rightTurn: number; leftRelease: boolean; rightRelease: boolean };
+/**
+ * One-shot presses, queued from keydown events so quick taps between frames aren't lost.
+ * The action key (Space / Enter) lets go of a slimed ball, or else fires the cannon.
+ */
+type Presses = { leftTurn: number; rightTurn: number; leftAction: boolean; rightAction: boolean };
 const noPresses = (): Presses => ({
   leftTurn: 0,
   rightTurn: 0,
-  leftRelease: false,
-  rightRelease: false,
+  leftAction: false,
+  rightAction: false,
 });
 
 /** Size of each held-upgrade marker under a score, in field pixels. */
@@ -77,6 +90,7 @@ export class PlayScene extends Phaser.Scene {
   private gfx!: Phaser.GameObjects.Graphics;
   private ball!: Phaser.GameObjects.Image;
   private paddles!: { left: Phaser.GameObjects.Image; right: Phaser.GameObjects.Image };
+  private shots: Phaser.GameObjects.Image[] = [];
   private badges!: { left: Phaser.GameObjects.Image[]; right: Phaser.GameObjects.Image[] };
   private keys!: Keys;
   private presses = noPresses();
@@ -113,6 +127,7 @@ export class PlayScene extends Phaser.Scene {
         .image(0, 0, paddleTexture(this, ZOOM, paddleHeight(this.state.left), false))
         .setScale(1 / ZOOM);
     this.paddles = { left: paddle(), right: paddle().setFlipX(true) };
+    this.shots = [];
     this.ball = this.add.image(0, 0, "ball").setOrigin(0).setDisplaySize(BS, BS);
     // A row of MAX_UPGRADES markers centred under each score, filled left to right.
     const row = (centerX: number) =>
@@ -134,7 +149,7 @@ export class PlayScene extends Phaser.Scene {
     keyboard.on("keydown-D", () => (p.leftTurn += 1));
     keyboard.on("keydown-LEFT", () => (solo() ? (p.leftTurn -= 1) : (p.rightTurn -= 1)));
     keyboard.on("keydown-RIGHT", () => (solo() ? (p.leftTurn += 1) : (p.rightTurn += 1)));
-    keyboard.on("keydown-ENTER", () => (p.rightRelease = !solo()));
+    keyboard.on("keydown-ENTER", () => (p.rightAction = !solo()));
     keyboard.on("keydown-ONE", () => {
       if (!this.ending) newGame(this.state, false, this.startUpgrades);
     });
@@ -143,7 +158,7 @@ export class PlayScene extends Phaser.Scene {
     });
     keyboard.on("keydown-SPACE", () => {
       if (this.state.phase === "attract") newGame(this.state, false, this.startUpgrades);
-      else p.leftRelease = true;
+      else p.leftAction = true;
     });
   }
 
@@ -166,8 +181,10 @@ export class PlayScene extends Phaser.Scene {
       right: axis(k.up.isDown, k.down.isDown),
       leftTurn: Math.sign(p.leftTurn) as Dir,
       rightTurn: Math.sign(p.rightTurn) as Dir,
-      leftRelease: p.leftRelease,
-      rightRelease: p.rightRelease,
+      leftRelease: p.leftAction,
+      rightRelease: p.rightAction,
+      leftFire: p.leftAction,
+      rightFire: p.rightAction,
     };
     Object.assign(p, noPresses());
     for (const event of step(this.state, input, this.rng)) sfx[event]();
@@ -196,15 +213,35 @@ export class PlayScene extends Phaser.Scene {
       .setTexture(ball.upgrade === null ? "ball" : UPGRADE_BALLS[ball.upgrade].key)
       .setDisplaySize(BS, BS)
       .setPosition(ball.x, ball.y);
+    this.drawShots();
     this.drawBadges(this.badges.left, left);
     this.drawBadges(this.badges.right, right);
+  }
+
+  /** Cannon shots use the plain ball art, drawn smaller; images are pooled. */
+  private drawShots(): void {
+    const { shots, phase } = this.state;
+    while (this.shots.length < shots.length) {
+      this.shots.push(
+        this.add.image(0, 0, "ball").setOrigin(0).setDisplaySize(SHOT_SIZE, SHOT_SIZE),
+      );
+    }
+    this.shots.forEach((image, i) => {
+      const shot = shots[i];
+      image.setVisible(phase === "play" && shot !== undefined);
+      if (shot) image.setPosition(shot.x, shot.y);
+    });
   }
 
   private drawPaddle(image: Phaser.GameObjects.Image, paddle: Paddle): void {
     const h = paddleHeight(paddle);
     const slime = upgradeCount(paddle, "slime") > 0;
+    const cannon = upgradeCount(paddle, "cannon") > 0;
+    // Rotate about the paddle's middle, not the middle of paddle-plus-cannon.
+    const originX = (PAD + PW / 2) / paddleTextureWidth(cannon);
     image
-      .setTexture(paddleTexture(this, ZOOM, h, slime))
+      .setTexture(paddleTexture(this, ZOOM, h, slime, cannon))
+      .setOrigin(image.flipX ? 1 - originX : originX, 0.5)
       .setPosition(paddle.x + PW / 2, Math.round(paddle.y) + h / 2)
       .setRotation(paddle.tilt * TILT_ANGLE);
   }

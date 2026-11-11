@@ -28,11 +28,25 @@ export const SIZE_UP_PX = 3;
 export const CPU_SLIME_HOLD = 30;
 /** How far a turn upgrade tilts the paddle, per key press, in radians. */
 export const TILT_ANGLE = Math.PI / 4;
+/** Size of a cannon shot, in field pixels. */
+export const SHOT_SIZE = 4;
+/** How fast a cannon shot flies (field pixels per frame). */
+export const SHOT_SPEED = SPEEDS[2];
+/** Chance per frame that a CPU holding a cannon fires while the ball heads away from it. */
+export const CPU_FIRE_CHANCE = 1 / 90;
 
 export type Dir = -1 | 0 | 1;
 export type Phase = "attract" | "play" | "over";
-export type SimEvent = "paddle" | "wall" | "score" | "transform" | "upgrade" | "stick";
-export const UPGRADES = ["strengthBoost", "speedBoost", "sizeUp", "slime", "turn"] as const;
+export type SimEvent =
+  "paddle" | "wall" | "score" | "transform" | "upgrade" | "stick" | "fire" | "dissolve";
+export const UPGRADES = [
+  "strengthBoost",
+  "speedBoost",
+  "sizeUp",
+  "slime",
+  "turn",
+  "cannon",
+] as const;
 export type Upgrade = (typeof UPGRADES)[number];
 export type Side = "left" | "right";
 export type Rng = () => number;
@@ -61,10 +75,20 @@ export interface Ball {
   stuck: { side: Side; offset: number; cpuTimer: number } | null;
 }
 
+/** A cannon shot: flies straight across, scores if it gets past, dissolves on a paddle. */
+export interface Shot {
+  x: number;
+  y: number;
+  vx: number;
+  /** Who fired it. */
+  side: Side;
+}
+
 export interface PongState {
   left: Paddle;
   right: Paddle;
   ball: Ball;
+  shots: Shot[];
   hits: number;
   serveDir: -1 | 1;
   serveTimer: number;
@@ -82,6 +106,9 @@ export interface PongInput {
   /** One-frame presses: let go of a slimed ball. */
   leftRelease?: boolean;
   rightRelease?: boolean;
+  /** One-frame presses: fire the cannon (ignored while the ball is stuck to that paddle). */
+  leftFire?: boolean;
+  rightFire?: boolean;
 }
 
 const midY = (H - PH) / 2;
@@ -131,6 +158,7 @@ export function createState(rng: Rng): PongState {
     left: { x: 10, y: midY, score: 0, upgrades: [], tilt: 0 },
     right: { x: W - 10 - PW, y: midY, score: 0, upgrades: [], tilt: 0 },
     ball,
+    shots: [],
     hits: 0,
     serveDir: rng() < 0.5 ? -1 : 1,
     serveTimer: 0,
@@ -155,6 +183,7 @@ export function newGame(state: PongState, twoPlayer: boolean, start: StartingUpg
   state.twoPlayer = twoPlayer;
   state.phase = "play";
   state.serveTimer = SERVE_DELAY;
+  state.shots = [];
   centreBall(state.ball);
 }
 
@@ -280,6 +309,52 @@ function moveCpu(state: PongState): void {
   }
 }
 
+/** Fires a cannon shot straight ahead from the paddle, using up one cannon upgrade. */
+function fireCannon(state: PongState, side: Side): boolean {
+  const paddle = state[side];
+  const i = paddle.upgrades.indexOf("cannon");
+  if (i < 0) return false;
+  paddle.upgrades.splice(i, 1);
+  const dir = side === "left" ? 1 : -1;
+  const y = paddle.y + paddleHeight(paddle) / 2 - SHOT_SIZE / 2;
+  const x = side === "left" ? paddle.x + PW : paddle.x - SHOT_SIZE;
+  state.shots.push({ x, y, vx: SHOT_SPEED * dir, side });
+  return true;
+}
+
+/** Moves the cannon shots: a shot dissolves on the other paddle, or scores if it gets past. */
+function moveShots(state: PongState, events: SimEvent[]): void {
+  state.shots = state.shots.filter((shot) => {
+    const prevX = shot.x;
+    shot.x += shot.vx;
+    const target = shot.side === "left" ? state.right : state.left;
+    const line = paddleLineX(target, shot.y + SHOT_SIZE / 2);
+    if (line !== null) {
+      const face = shot.vx > 0 ? line - PW / 2 - SHOT_SIZE : line + PW / 2;
+      const crossed = shot.vx > 0 ? prevX <= face && shot.x > face : prevX >= face && shot.x < face;
+      if (crossed) {
+        events.push("dissolve");
+        return false;
+      }
+    }
+    if (shot.x > W || shot.x + SHOT_SIZE < 0) {
+      state[shot.side].score++;
+      events.push("score");
+      if (winner(state) !== null) state.phase = "over";
+      return false;
+    }
+    return true;
+  });
+}
+
+/** A CPU holding a cannon now and then fires while the ball is heading back to the player. */
+function cpuWantsToFire(state: PongState, rng: Rng): boolean {
+  const { ball } = state;
+  if (state.twoPlayer || upgradeCount(state.right, "cannon") === 0) return false;
+  if (!ball.live || ball.stuck || ball.vx >= 0) return false;
+  return rng() < CPU_FIRE_CHANCE;
+}
+
 export function step(state: PongState, input: PongInput, rng: Rng): SimEvent[] {
   const events: SimEvent[] = [];
   const { left, right, ball } = state;
@@ -294,6 +369,17 @@ export function step(state: PongState, input: PongInput, rng: Rng): SimEvent[] {
   } else if (state.phase !== "over") moveCpu(state);
 
   if (state.phase !== "play") return events;
+
+  // Space (or Enter) lets go of a slimed ball first; otherwise it fires the cannon.
+  const leftFire = input.leftFire && ball.stuck?.side !== "left";
+  const rightFire = state.twoPlayer
+    ? input.rightFire && ball.stuck?.side !== "right"
+    : cpuWantsToFire(state, rng);
+  if (leftFire && fireCannon(state, "left")) events.push("fire");
+  if (rightFire && fireCannon(state, "right")) events.push("fire");
+  moveShots(state, events);
+  if (state.phase !== "play") return events;
+
   if (!ball.live) {
     state.serveTimer--;
     if (state.serveTimer <= 0) serve(state, rng);

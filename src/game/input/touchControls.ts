@@ -96,3 +96,11 @@ function stickElement(className: string, size: number): HTMLDivElement {
 function place(element: HTMLElement, at: { x: number; y: number }): void {
   element.style.transform = `translate(${at.x}px, ${at.y}px) translate(-50%, -50%)`;
 }
+
+/**
+ * True on phones and tablets: no hover and a coarse pointer, the same test the page uses to
+ * show the touch help. Two-player mode needs a keyboard, so these skip the opponent screen.
+ */
+export function isTouchOnly(): boolean {
+  return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+}

@@ -36,7 +36,7 @@ Touch uses the same scheme as Dot-Man: put a finger down anywhere (the margins a
 - **Drag left / right**: tilt your paddle (with the turn upgrade), once per swipe.
 - **Tap**: the same as Space. It starts the game from the title screen, lets go of a slimed ball or fires the cannon, and returns to the title from the win/loss screen. A finger that never leaves the stick's deadzone counts as a tap, and so does a second finger put down while you're dragging.
 
-Two-player mode needs a keyboard.
+Two-player mode needs a keyboard, so on a phone or tablet Start goes straight to a game against the CPU.
 
 ## Rules (as in the original, except the winning score)
 
@@ -77,7 +77,7 @@ The ball art comes from a hand drawing and lives in `src/assets/play`.
 
 ## Opponent screen
 
-After Start, the whole screen is one giant green crayon box from a hand drawing, reading **cpu/plyr**. Tap anywhere left of the slash to play the CPU, or right of it to play another player. The box is cut from the photo with its own pencil lettering and lives in `src/assets/mode`; the slash's position is in `src/game/scenes/opponent.ts`.
+After Start, the whole screen is one giant green crayon box from a hand drawing, reading **cpu/plyr**. Tap anywhere left of the slash to play the CPU, or right of it to play another player. Phones and tablets skip this screen and go straight to a game against the CPU, since two-player mode needs a keyboard. The box is cut from the photo with its own pencil lettering and lives in `src/assets/mode`; the slash's position is in `src/game/scenes/opponent.ts`.
 
 ## Win and loss screens
 

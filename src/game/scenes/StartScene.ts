@@ -45,11 +45,13 @@ export class StartScene extends Phaser.Scene {
     this.place("title-paddle", PIECES.paddleRight, PIECES.paddleRight.scale);
     this.ball = this.place("title-dot", PIECES.dot);
     this.addStartButton();
+    this.addCreditsButton();
 
     const keyboard = this.input.keyboard!;
     keyboard.addCapture("SPACE,ENTER");
     keyboard.once("keydown-SPACE", () => this.startGame());
     keyboard.once("keydown-ENTER", () => this.startGame());
+    keyboard.once("keydown-C", () => this.showCredits());
   }
 
   update(_time: number, delta: number): void {
@@ -89,6 +91,30 @@ export class StartScene extends Phaser.Scene {
     image.setInteractive({ useHandCursor: true, pixelPerfect: true });
     label.once("pointerdown", () => this.startGame());
     image.once("pointerdown", () => this.startGame());
+  }
+
+  /** Smaller copy of the Start box in the top-left corner that opens the credits page. */
+  private addCreditsButton(): void {
+    const { creditsButton: box } = PIECES;
+    const image = this.place("title-button", box, box.scale).setFlipX(true);
+    const label = this.add
+      .text(this.toCanvasX(box.x + box.w / 2), this.toCanvasY(box.y + box.h / 2), "Credits", {
+        fontFamily: START_FONT,
+        fontSize: `${Math.round(46 * this.scaleToCanvas)}px`,
+        color: "#000000",
+        padding: { x: 8, y: 16 },
+      })
+      .setOrigin(0.5)
+      .setAngle(4);
+    label.setInteractive({ useHandCursor: true });
+    image.setInteractive({ useHandCursor: true, pixelPerfect: true });
+    label.once("pointerdown", () => this.showCredits());
+    image.once("pointerdown", () => this.showCredits());
+  }
+
+  private showCredits(): void {
+    if (!this.scene.isActive()) return;
+    this.scene.start("CreditsScene");
   }
 
   private toCanvasX(x: number): number {

@@ -3,7 +3,17 @@ import ballUpgradeUrl from "../../assets/play/ball-upgrade.png";
 import ballUrl from "../../assets/play/ball.png";
 import { sfx } from "../audio/beep";
 import { makeSketchTextures, NET_KEY, NET_X, PAD, PADDLE_KEY } from "./sketch";
-import { BS, createState, newGame, step, W, H, type Dir, type PongState } from "../sim/pong";
+import {
+  BS,
+  createState,
+  newGame,
+  step,
+  W,
+  H,
+  MAX_UPGRADES,
+  type Dir,
+  type PongState,
+} from "../sim/pong";
 
 const STEP_MS = 1000 / 60;
 
@@ -25,15 +35,16 @@ const DIGITS = [
 
 type Keys = Record<"w" | "s" | "up" | "down", Phaser.Input.Keyboard.Key>;
 
-/** Size of the held-upgrade marker under each score, in field pixels. */
-const BADGE = 8;
+/** Size of each held-upgrade marker under a score, in field pixels. */
+const BADGE = 7;
+const BADGE_GAP = 1;
 
 export class PlayScene extends Phaser.Scene {
   private state!: PongState;
   private gfx!: Phaser.GameObjects.Graphics;
   private ball!: Phaser.GameObjects.Image;
   private paddles!: { left: Phaser.GameObjects.Image; right: Phaser.GameObjects.Image };
-  private badges!: { left: Phaser.GameObjects.Image; right: Phaser.GameObjects.Image };
+  private badges!: { left: Phaser.GameObjects.Image[]; right: Phaser.GameObjects.Image[] };
   private keys!: Keys;
   private acc = 0;
   private readonly rng = () => Math.random();
@@ -64,9 +75,15 @@ export class PlayScene extends Phaser.Scene {
         .setScale(1 / ZOOM);
     this.paddles = { left: paddle(), right: paddle().setFlipX(true) };
     this.ball = this.add.image(0, 0, "ball").setOrigin(0).setDisplaySize(BS, BS);
-    const badge = (x: number) =>
-      this.add.image(x, 26, "ball-upgrade").setOrigin(0.5, 0).setDisplaySize(BADGE, BADGE);
-    this.badges = { left: badge(W / 2 - 24), right: badge(W / 2 + 24) };
+    // A row of MAX_UPGRADES markers centred under each score, filled left to right.
+    const row = (centerX: number) =>
+      Array.from({ length: MAX_UPGRADES }, (_, i) =>
+        this.add
+          .image(centerX + (i - (MAX_UPGRADES - 1) / 2) * (BADGE + BADGE_GAP), 26, "ball-upgrade")
+          .setOrigin(0.5, 0)
+          .setDisplaySize(BADGE, BADGE),
+      );
+    this.badges = { left: row(W / 2 - 24), right: row(W / 2 + 24) };
     const keyboard = this.input.keyboard!;
     this.keys = keyboard.addKeys({ w: "W", s: "S", up: "UP", down: "DOWN" }) as Keys;
     keyboard.addCapture("UP,DOWN,SPACE");
@@ -111,8 +128,8 @@ export class PlayScene extends Phaser.Scene {
       .setTexture(ball.upgrade === null ? "ball" : "ball-upgrade")
       .setDisplaySize(BS, BS)
       .setPosition(ball.x, ball.y);
-    this.badges.left.setVisible(left.upgrade !== null);
-    this.badges.right.setVisible(right.upgrade !== null);
+    this.badges.left.forEach((b, i) => b.setVisible(i < left.upgrades.length));
+    this.badges.right.forEach((b, i) => b.setVisible(i < right.upgrades.length));
   }
 
   private number(n: number, x: number, y: number): void {

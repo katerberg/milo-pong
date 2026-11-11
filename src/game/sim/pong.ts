@@ -15,8 +15,10 @@ export const VY = [-3, -2, -1, 0, 0, 1, 2, 3] as const;
 export const SERVE_DELAY = 60;
 /** Chance an ordinary ball turns into an upgrade ball each time it crosses the net. */
 export const UPGRADE_CHANCE = 0.5;
-/** Strength boost: balls hit by a boosted paddle travel this much faster. */
-export const STRENGTH_BOOST = 4 / 3;
+/** Most upgrades a side can hold. Once full, scoring with an upgrade ball is a normal point. */
+export const MAX_UPGRADES = 3;
+/** Each strength boost a paddle holds makes its hits this much faster (stacks additively). */
+export const STRENGTH_BOOST_STEP = 1 / 3;
 
 export type Dir = -1 | 0 | 1;
 export type Phase = "attract" | "play" | "over";
@@ -28,8 +30,8 @@ export interface Paddle {
   x: number;
   y: number;
   score: number;
-  /** One upgrade at a time for now. */
-  upgrade: Upgrade | null;
+  /** Upgrades held, at most MAX_UPGRADES; they stack. */
+  upgrades: Upgrade[];
 }
 
 export interface Ball {
@@ -74,8 +76,8 @@ export function createState(rng: Rng): PongState {
   const ball: Ball = { x: 0, y: 0, vx: 0, vy: 0, live: false, upgrade: null };
   centreBall(ball);
   return {
-    left: { x: 10, y: midY, score: 0, upgrade: null },
-    right: { x: W - 10 - PW, y: midY, score: 0, upgrade: null },
+    left: { x: 10, y: midY, score: 0, upgrades: [] },
+    right: { x: W - 10 - PW, y: midY, score: 0, upgrades: [] },
     ball,
     hits: 0,
     serveDir: rng() < 0.5 ? -1 : 1,
@@ -89,8 +91,8 @@ export function createState(rng: Rng): PongState {
 export function newGame(state: PongState, twoPlayer: boolean): void {
   state.left.score = 0;
   state.right.score = 0;
-  state.left.upgrade = null;
-  state.right.upgrade = null;
+  state.left.upgrades = [];
+  state.right.upgrades = [];
   state.left.y = midY;
   state.right.y = midY;
   state.twoPlayer = twoPlayer;
@@ -133,10 +135,14 @@ function serve(state: PongState, rng: Rng): void {
   state.aiAim = newAim(state, rng);
 }
 
+/** Speed multiplier for balls this paddle hits. */
+export const strengthBoost = (paddle: Paddle): number =>
+  1 + STRENGTH_BOOST_STEP * paddle.upgrades.filter((u) => u === "strengthBoost").length;
+
 function hitPaddle(state: PongState, paddle: Paddle, dir: -1 | 1, rng: Rng): void {
   const { ball } = state;
   state.hits++;
-  const boost = paddle.upgrade === "strengthBoost" ? STRENGTH_BOOST : 1;
+  const boost = strengthBoost(paddle);
   ball.vx = ballSpeed(state.hits) * dir * boost;
   ball.vy = VY[segmentOf(ball.y, paddle.y)] * 0.5 * boost;
   if (dir < 0) state.aiAim = newAim(state, rng);
@@ -204,8 +210,8 @@ export function step(state: PongState, input: PongInput, rng: Rng): SimEvent[] {
   if (ball.x + BS < 0 || ball.x > W) {
     const leftScored = ball.x > W;
     const scorer = leftScored ? left : right;
-    if (ball.upgrade !== null && scorer.upgrade === null) {
-      scorer.upgrade = ball.upgrade;
+    if (ball.upgrade !== null && scorer.upgrades.length < MAX_UPGRADES) {
+      scorer.upgrades.push(ball.upgrade);
       events.push("upgrade");
     } else {
       scorer.score++;

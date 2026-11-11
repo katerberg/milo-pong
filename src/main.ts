@@ -1,5 +1,6 @@
 import "@fontsource/gochi-hand";
 import Phaser from "phaser";
+import { initAnalytics } from "./analytics";
 import { gameConfig } from "./game/config";
 import { START_FONT } from "./game/scenes/StartScene";
 import "./styles.css";
@@ -9,6 +10,8 @@ declare global {
     __PING_GAME__?: Phaser.Game;
   }
 }
+
+initAnalytics();
 
 // Wait for the handwriting font so the Start label is measured with the right glyphs.
 void document.fonts

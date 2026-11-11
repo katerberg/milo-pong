@@ -21,7 +21,7 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 ## Controls
 
 - **Start** button, **Space** or **Enter**: start from the title screen
-- **Space** or **Enter**: play again from the win/loss screen · **Esc** or the **back** bar: back to the title
+- **Space**, **Enter**, **Esc** or the **back** bar: back to the title from the win/loss screen
 - **W / S** or **↑ / ↓**: move your (left) paddle
 - **A / D** or **← / →**: tilt your paddle (with the turn upgrade)
 - **Space**: let go of a ball stuck to your paddle (with the slime upgrade), or else fire your cannon (with the cannon upgrade)

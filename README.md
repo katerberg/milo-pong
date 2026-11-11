@@ -20,7 +20,8 @@ The game rules live in `src/game/sim/pong.ts`. That file doesn't use Phaser and 
 
 ## Controls
 
-- **Start** button, **Space** or **Enter**: start from the title screen
+- **Start** button, **Space** or **Enter**: go from the title screen to the opponent screen
+- On the opponent screen, tap or click **cpu** (or press **1** or **C**) to play the CPU, or **plyr** (or **2** or **P**) for two players. **Esc** goes back to the title.
 - **Space**, **Enter**, **Esc** or the **back** bar: back to the title from the win/loss screen
 - **W / S** or **↑ / ↓**: move your (left) paddle
 - **A / D** or **← / →**: tilt your paddle (with the turn upgrade)
@@ -35,7 +36,7 @@ Put a finger down anywhere (the margins around the game count too) and your padd
 - **Swipe left / right**: tilt your paddle (with the turn upgrade), once per swipe.
 - **Tap**: the same as Space. It starts the game from the title screen, lets go of a slimed ball or fires the cannon, and returns to the title from the win/loss screen. A quick touch that doesn't move counts as a tap (and doesn't move the paddle), and so does a second finger put down while you're steering.
 
-Two-player mode needs a keyboard.
+Two-player mode needs a keyboard, so on a phone or tablet Start goes straight to a game against the CPU.
 
 ## Rules (as in the original, except the winning score)
 
@@ -73,6 +74,10 @@ http://localhost:5173/?upgrades=slime,turn&cpuUpgrades=size,size
 ```
 
 The ball art comes from a hand drawing and lives in `src/assets/play`.
+
+## Opponent screen
+
+After Start, the whole screen is one giant green crayon box from a hand drawing, reading **cpu/plyr**. Tap anywhere left of the slash to play the CPU, or right of it to play another player. Phones and tablets skip this screen and go straight to a game against the CPU, since two-player mode needs a keyboard. The box is cut from the photo with its own pencil lettering and lives in `src/assets/mode`; the slash's position is in `src/game/scenes/opponent.ts`.
 
 ## Win and loss screens
 

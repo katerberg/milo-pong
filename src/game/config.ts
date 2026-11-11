@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { H, W } from "./sim/pong";
 import { CreditsScene } from "./scenes/CreditsScene";
 import { EndScene } from "./scenes/EndScene";
+import { ModeScene } from "./scenes/ModeScene";
 import { PlayScene, ZOOM } from "./scenes/PlayScene";
 import { StartScene } from "./scenes/StartScene";
 
@@ -13,7 +14,7 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   backgroundColor: "#1C8028",
   banner: false,
   antialias: true,
-  scene: [StartScene, PlayScene, EndScene, CreditsScene],
+  scene: [StartScene, ModeScene, PlayScene, EndScene, CreditsScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

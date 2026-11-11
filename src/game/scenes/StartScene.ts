@@ -4,7 +4,7 @@ import dotUrl from "../../assets/start/dot.png";
 import paddleUrl from "../../assets/start/paddle.png";
 import wordUrl from "../../assets/start/word.png";
 import { setHelpVisible } from "../help";
-import { onScreenTap } from "../input/touchControls";
+import { isTouchOnly, onScreenTap } from "../input/touchControls";
 import { DRAWING, PIECES } from "./startLayout";
 
 export const TITLE_BG = 0x2458bf;
@@ -130,7 +130,12 @@ export class StartScene extends Phaser.Scene {
 
   private startGame(): void {
     if (!this.scene.isActive()) return;
-    setHelpVisible(this.game, true);
-    this.scene.start("PlayScene", { start: true });
+    // Two players needs a keyboard, so touch-only devices go straight to a game against the CPU.
+    if (isTouchOnly()) {
+      setHelpVisible(this.game, true);
+      this.scene.start("PlayScene", { start: true, twoPlayer: false });
+    } else {
+      this.scene.start("ModeScene");
+    }
   }
 }

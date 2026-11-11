@@ -78,3 +78,11 @@ export function onScreenTap(scene: Phaser.Scene, onTap: () => void): void {
     window.removeEventListener("touchstart", onMarginTouch);
   });
 }
+
+/**
+ * True on phones and tablets: no hover and a coarse pointer, the same test the page uses to
+ * show the touch help. Two-player mode needs a keyboard, so these skip the opponent screen.
+ */
+export function isTouchOnly(): boolean {
+  return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+}

@@ -2,18 +2,8 @@ import Phaser from "phaser";
 import ballUpgradeUrl from "../../assets/play/ball-upgrade.png";
 import ballUrl from "../../assets/play/ball.png";
 import { sfx } from "../audio/beep";
-import {
-  BS,
-  createState,
-  newGame,
-  PH,
-  PW,
-  step,
-  W,
-  H,
-  type Dir,
-  type PongState,
-} from "../sim/pong";
+import { makeSketchTextures, NET_KEY, NET_X, PAD, PADDLE_KEY } from "./sketch";
+import { BS, createState, newGame, step, W, H, type Dir, type PongState } from "../sim/pong";
 
 const STEP_MS = 1000 / 60;
 
@@ -42,6 +32,7 @@ export class PlayScene extends Phaser.Scene {
   private state!: PongState;
   private gfx!: Phaser.GameObjects.Graphics;
   private ball!: Phaser.GameObjects.Image;
+  private paddles!: { left: Phaser.GameObjects.Image; right: Phaser.GameObjects.Image };
   private badges!: { left: Phaser.GameObjects.Image; right: Phaser.GameObjects.Image };
   private keys!: Keys;
   private acc = 0;
@@ -60,7 +51,18 @@ export class PlayScene extends Phaser.Scene {
     this.state = createState(this.rng);
     if (data.start) newGame(this.state, false);
     this.cameras.main.setZoom(ZOOM).centerOn(W / 2, H / 2);
+    makeSketchTextures(this, ZOOM);
+    this.add
+      .image(NET_X, 0, NET_KEY)
+      .setOrigin(0)
+      .setScale(1 / ZOOM);
     this.gfx = this.add.graphics();
+    const paddle = () =>
+      this.add
+        .image(0, 0, PADDLE_KEY)
+        .setOrigin(0)
+        .setScale(1 / ZOOM);
+    this.paddles = { left: paddle(), right: paddle().setFlipX(true) };
     this.ball = this.add.image(0, 0, "ball").setOrigin(0).setDisplaySize(BS, BS);
     const badge = (x: number) =>
       this.add.image(x, 26, "ball-upgrade").setOrigin(0.5, 0).setDisplaySize(BADGE, BADGE);
@@ -100,11 +102,10 @@ export class PlayScene extends Phaser.Scene {
     const { left, right, ball, phase } = this.state;
     g.clear();
     g.fillStyle(0xffffff);
-    for (let y = 0; y < H; y += 8) g.fillRect(W / 2 - 1, y, 2, 4);
     this.number(left.score, W / 2 - 30, 6);
     this.number(right.score, W / 2 + 18, 6);
-    g.fillRect(left.x, Math.round(left.y), PW, PH);
-    g.fillRect(right.x, Math.round(right.y), PW, PH);
+    this.paddles.left.setPosition(left.x - PAD, Math.round(left.y) - PAD);
+    this.paddles.right.setPosition(right.x - PAD, Math.round(right.y) - PAD);
     this.ball
       .setVisible(phase === "play" && ball.live)
       .setTexture(ball.upgrade === null ? "ball" : "ball-upgrade")

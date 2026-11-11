@@ -4,12 +4,13 @@ export const PW = 3;
 export const PH = 16;
 export const BS = 6;
 export const TOP_GAP = 6;
-export const WIN = 11;
+export const WIN = 5;
 export const P_SPEED = 2.5;
 // The CPU starts out slow and sloppy, then sharpens up as you score against it.
 export const AI_SPEED_MIN = 1.0;
 export const AI_SPEED_MAX = 1.6;
-export const AI_LEARN_POINTS = 6;
+// Fully sharp by the time the player is one point from winning.
+export const AI_LEARN_POINTS = WIN - 1;
 export const SPEEDS = [1.5, 2.0, 2.6] as const;
 export const VY = [-3, -2, -1, 0, 0, 1, 2, 3] as const;
 export const SERVE_DELAY = 60;
@@ -102,6 +103,13 @@ export function newGame(state: PongState, twoPlayer: boolean): void {
   state.phase = "play";
   state.serveTimer = SERVE_DELAY;
   centreBall(state.ball);
+}
+
+/** Which side has reached WIN points, if any. */
+export function winner(state: PongState): "left" | "right" | null {
+  if (state.left.score >= WIN) return "left";
+  if (state.right.score >= WIN) return "right";
+  return null;
 }
 
 export function ballSpeed(hits: number): number {
@@ -225,7 +233,7 @@ export function step(state: PongState, input: PongInput, rng: Rng): SimEvent[] {
     }
     state.serveDir = leftScored ? 1 : -1;
     centreBall(ball);
-    if (left.score >= WIN || right.score >= WIN) state.phase = "over";
+    if (winner(state) !== null) state.phase = "over";
     else state.serveTimer = SERVE_DELAY;
   }
 

@@ -46,6 +46,16 @@ describe("pong sim", () => {
     expect(clampPaddle(H)).toBe(H - PH);
   });
 
+  it("moves the left paddle toward a touch target at paddle speed, without overshooting", () => {
+    const s = createState(() => 0.5);
+    const middle = () => s.left.y + PH / 2;
+    const start = middle();
+    step(s, { ...idle, leftTo: start + 100 }, () => 0.5);
+    expect(middle()).toBeCloseTo(start + P_SPEED);
+    step(s, { ...idle, leftTo: start + P_SPEED + 1 }, () => 0.5);
+    expect(middle()).toBeCloseTo(start + P_SPEED + 1);
+  });
+
   it("speeds the ball up after 4 and 12 hits", () => {
     expect(ballSpeed(3)).toBeLessThan(ballSpeed(4));
     expect(ballSpeed(11)).toBeLessThan(ballSpeed(12));

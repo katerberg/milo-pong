@@ -13,16 +13,23 @@ export const AI_LEARN_POINTS = 6;
 export const SPEEDS = [1.5, 2.0, 2.6] as const;
 export const VY = [-3, -2, -1, 0, 0, 1, 2, 3] as const;
 export const SERVE_DELAY = 60;
+/** Chance an ordinary ball turns into an upgrade ball each time it crosses the net. */
+export const UPGRADE_CHANCE = 0.5;
+/** Strength boost: balls hit by a boosted paddle travel this much faster. */
+export const STRENGTH_BOOST = 4 / 3;
 
 export type Dir = -1 | 0 | 1;
 export type Phase = "attract" | "play" | "over";
-export type SimEvent = "paddle" | "wall" | "score";
+export type SimEvent = "paddle" | "wall" | "score" | "transform" | "upgrade";
+export type Upgrade = "strengthBoost";
 export type Rng = () => number;
 
 export interface Paddle {
   x: number;
   y: number;
   score: number;
+  /** One upgrade at a time for now. */
+  upgrade: Upgrade | null;
 }
 
 export interface Ball {
@@ -31,6 +38,8 @@ export interface Ball {
   vx: number;
   vy: number;
   live: boolean;
+  /** Scoring with an upgrade ball grants this upgrade instead of a point. */
+  upgrade: Upgrade | null;
 }
 
 export interface PongState {
@@ -56,16 +65,17 @@ export const clampPaddle = (y: number): number => Math.max(TOP_GAP, Math.min(H -
 
 function centreBall(ball: Ball): void {
   ball.live = false;
+  ball.upgrade = null;
   ball.x = (W - BS) / 2;
   ball.y = (H - BS) / 2;
 }
 
 export function createState(rng: Rng): PongState {
-  const ball: Ball = { x: 0, y: 0, vx: 0, vy: 0, live: false };
+  const ball: Ball = { x: 0, y: 0, vx: 0, vy: 0, live: false, upgrade: null };
   centreBall(ball);
   return {
-    left: { x: 10, y: midY, score: 0 },
-    right: { x: W - 10 - PW, y: midY, score: 0 },
+    left: { x: 10, y: midY, score: 0, upgrade: null },
+    right: { x: W - 10 - PW, y: midY, score: 0, upgrade: null },
     ball,
     hits: 0,
     serveDir: rng() < 0.5 ? -1 : 1,
@@ -79,6 +89,8 @@ export function createState(rng: Rng): PongState {
 export function newGame(state: PongState, twoPlayer: boolean): void {
   state.left.score = 0;
   state.right.score = 0;
+  state.left.upgrade = null;
+  state.right.upgrade = null;
   state.left.y = midY;
   state.right.y = midY;
   state.twoPlayer = twoPlayer;
@@ -124,8 +136,9 @@ function serve(state: PongState, rng: Rng): void {
 function hitPaddle(state: PongState, paddle: Paddle, dir: -1 | 1, rng: Rng): void {
   const { ball } = state;
   state.hits++;
-  ball.vx = ballSpeed(state.hits) * dir;
-  ball.vy = VY[segmentOf(ball.y, paddle.y)] * 0.5;
+  const boost = paddle.upgrade === "strengthBoost" ? STRENGTH_BOOST : 1;
+  ball.vx = ballSpeed(state.hits) * dir * boost;
+  ball.vy = VY[segmentOf(ball.y, paddle.y)] * 0.5 * boost;
   if (dir < 0) state.aiAim = newAim(state, rng);
 }
 
@@ -160,6 +173,13 @@ export function step(state: PongState, input: PongInput, rng: Rng): SimEvent[] {
   ball.x += ball.vx;
   ball.y += ball.vy;
 
+  const net = (W - BS) / 2;
+  const crossedNet = (prevX < net && ball.x >= net) || (prevX > net && ball.x <= net);
+  if (crossedNet && ball.upgrade === null && rng() < UPGRADE_CHANCE) {
+    ball.upgrade = "strengthBoost";
+    events.push("transform");
+  }
+
   if (ball.y < 0) {
     ball.y = -ball.y;
     ball.vy = -ball.vy;
@@ -183,9 +203,15 @@ export function step(state: PongState, input: PongInput, rng: Rng): SimEvent[] {
 
   if (ball.x + BS < 0 || ball.x > W) {
     const leftScored = ball.x > W;
-    (leftScored ? left : right).score++;
+    const scorer = leftScored ? left : right;
+    if (ball.upgrade !== null && scorer.upgrade === null) {
+      scorer.upgrade = ball.upgrade;
+      events.push("upgrade");
+    } else {
+      scorer.score++;
+      events.push("score");
+    }
     state.serveDir = leftScored ? 1 : -1;
-    events.push("score");
     centreBall(ball);
     if (left.score >= WIN || right.score >= WIN) state.phase = "over";
     else state.serveTimer = SERVE_DELAY;

@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+import ballUpgradeUrl from "../../assets/play/ball-upgrade.png";
+import ballUrl from "../../assets/play/ball.png";
 import { sfx } from "../audio/beep";
 import {
   BS,
@@ -33,9 +35,14 @@ const DIGITS = [
 
 type Keys = Record<"w" | "s" | "up" | "down", Phaser.Input.Keyboard.Key>;
 
+/** Size of the held-upgrade marker under each score, in field pixels. */
+const BADGE = 8;
+
 export class PlayScene extends Phaser.Scene {
   private state!: PongState;
   private gfx!: Phaser.GameObjects.Graphics;
+  private ball!: Phaser.GameObjects.Image;
+  private badges!: { left: Phaser.GameObjects.Image; right: Phaser.GameObjects.Image };
   private keys!: Keys;
   private acc = 0;
   private readonly rng = () => Math.random();
@@ -44,11 +51,20 @@ export class PlayScene extends Phaser.Scene {
     super("PlayScene");
   }
 
+  preload(): void {
+    this.load.image("ball", ballUrl);
+    this.load.image("ball-upgrade", ballUpgradeUrl);
+  }
+
   create(data: { start?: boolean } = {}): void {
     this.state = createState(this.rng);
     if (data.start) newGame(this.state, false);
     this.cameras.main.setZoom(ZOOM).centerOn(W / 2, H / 2);
     this.gfx = this.add.graphics();
+    this.ball = this.add.image(0, 0, "ball").setOrigin(0).setDisplaySize(BS, BS);
+    const badge = (x: number) =>
+      this.add.image(x, 26, "ball-upgrade").setOrigin(0.5, 0).setDisplaySize(BADGE, BADGE);
+    this.badges = { left: badge(W / 2 - 24), right: badge(W / 2 + 24) };
     const keyboard = this.input.keyboard!;
     this.keys = keyboard.addKeys({ w: "W", s: "S", up: "UP", down: "DOWN" }) as Keys;
     keyboard.addCapture("UP,DOWN,SPACE");
@@ -89,7 +105,13 @@ export class PlayScene extends Phaser.Scene {
     this.number(right.score, W / 2 + 18, 6);
     g.fillRect(left.x, Math.round(left.y), PW, PH);
     g.fillRect(right.x, Math.round(right.y), PW, PH);
-    if (phase === "play" && ball.live) g.fillRect(Math.round(ball.x), Math.round(ball.y), BS, BS);
+    this.ball
+      .setVisible(phase === "play" && ball.live)
+      .setTexture(ball.upgrade === null ? "ball" : "ball-upgrade")
+      .setDisplaySize(BS, BS)
+      .setPosition(ball.x, ball.y);
+    this.badges.left.setVisible(left.upgrade !== null);
+    this.badges.right.setVisible(right.upgrade !== null);
   }
 
   private number(n: number, x: number, y: number): void {

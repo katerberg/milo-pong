@@ -21,4 +21,6 @@ export const sfx = {
   paddle: () => beep(490, 40),
   wall: () => beep(245, 40),
   score: () => beep(245, 260),
+  transform: () => beep(980, 30),
+  upgrade: () => beep(740, 300),
 };

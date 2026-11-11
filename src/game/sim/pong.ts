@@ -104,6 +104,11 @@ export interface PongState {
 export interface PongInput {
   left: Dir;
   right: Dir;
+  /**
+   * Touch: the height the left paddle's middle should head for, overriding `left`. The paddle
+   * still moves at its usual speed, and stops on the spot instead of overshooting.
+   */
+  leftTo?: number | null;
   /** One-frame presses: tilt the paddle (turn upgrade). */
   leftTurn?: Dir;
   rightTurn?: Dir;
@@ -364,9 +369,14 @@ export function step(state: PongState, input: PongInput, rng: Rng): SimEvent[] {
   const events: SimEvent[] = [];
   const { left, right, ball } = state;
 
-  const move = (paddle: Paddle, dir: Dir) =>
-    clampPaddle(paddle.y + dir * P_SPEED * paddleSpeedBoost(paddle), paddleHeight(paddle));
-  left.y = move(left, input.left);
+  const move = (paddle: Paddle, dir: Dir, to?: number | null) => {
+    const speed = P_SPEED * paddleSpeedBoost(paddle);
+    const h = paddleHeight(paddle);
+    const dy =
+      to == null ? dir * speed : Math.max(-speed, Math.min(speed, to - (paddle.y + h / 2)));
+    return clampPaddle(paddle.y + dy, h);
+  };
+  left.y = move(left, input.left, input.leftTo);
   turnPaddle(left, input.leftTurn);
   if (state.twoPlayer) {
     right.y = move(right, input.right);

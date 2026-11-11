@@ -16,7 +16,7 @@ const EMMA_COLOR_PNG_W = 800;
 /** Everything the lettering can cover, so nothing moves when "Emma" changes. */
 const ART = { w: EMMA_COLOR.x + EMMA_COLOR.w, h: 552 };
 /** How long the handwritten "Emma" shows before the coloured one replaces it. */
-export const EMMA_SWAP_MS = 5000;
+export const EMMA_SWAP_MS = 2000;
 const BACK_ART_H = 136;
 
 /** Height of the "back" bar along the bottom, as a share of the screen. */

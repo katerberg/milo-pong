@@ -18,6 +18,8 @@ export const SERVE_DELAY = 60;
 export const UPGRADE_CHANCE = 0.5;
 /** Most upgrades a side can hold. Once full, scoring with an upgrade ball is a normal point. */
 export const MAX_UPGRADES = 3;
+/** A side that lets the ball past this many times in a row (the other side never missing) loses all its upgrades. */
+export const MISS_LIMIT = 3;
 /** Each strength boost a paddle holds makes its hits this much faster (stacks additively). */
 export const STRENGTH_BOOST_STEP = 1 / 3;
 /** Each speed boost a paddle holds makes the paddle itself move this much faster (stacks). */
@@ -59,6 +61,8 @@ export interface Paddle {
   upgrades: Upgrade[];
   /** With the turn upgrade: -1 tilted anticlockwise, 0 upright, 1 tilted clockwise. */
   tilt: Dir;
+  /** Balls let past this paddle in a row, without the other side missing one. */
+  missStreak: number;
 }
 
 export interface Ball {
@@ -155,8 +159,8 @@ export function createState(rng: Rng): PongState {
   };
   centreBall(ball);
   return {
-    left: { x: 10, y: midY, score: 0, upgrades: [], tilt: 0 },
-    right: { x: W - 10 - PW, y: midY, score: 0, upgrades: [], tilt: 0 },
+    left: { x: 10, y: midY, score: 0, upgrades: [], tilt: 0, missStreak: 0 },
+    right: { x: W - 10 - PW, y: midY, score: 0, upgrades: [], tilt: 0, missStreak: 0 },
     ball,
     shots: [],
     hits: 0,
@@ -177,6 +181,7 @@ export function newGame(state: PongState, twoPlayer: boolean, start: StartingUpg
   for (const side of ["left", "right"] as const) {
     state[side].upgrades = (start[side] ?? []).slice(0, MAX_UPGRADES);
     state[side].tilt = 0;
+    state[side].missStreak = 0;
   }
   state.left.y = midY;
   state.right.y = midY;
@@ -434,12 +439,21 @@ export function step(state: PongState, input: PongInput, rng: Rng): SimEvent[] {
   if (ball.x + BS < 0 || ball.x > W) {
     const leftScored = ball.x > W;
     const scorer = leftScored ? left : right;
+    const loser = leftScored ? right : left;
+    scorer.missStreak = 0;
+    loser.missStreak++;
     if (ball.upgrade !== null && scorer.upgrades.length < MAX_UPGRADES) {
       scorer.upgrades.push(ball.upgrade);
       events.push("upgrade");
     } else {
       scorer.score++;
       events.push("score");
+    }
+    if (loser.missStreak >= MISS_LIMIT) {
+      loser.upgrades = [];
+      loser.tilt = 0;
+      loser.missStreak = 0;
+      events.push("dissolve");
     }
     state.serveDir = leftScored ? 1 : -1;
     centreBall(ball);

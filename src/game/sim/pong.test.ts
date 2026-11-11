@@ -537,3 +537,36 @@ describe("more upgrades", () => {
     });
   });
 });
+
+describe("miss streak", () => {
+  const pastRight = (s: PongState) => {
+    s.ball.live = true;
+    aim(s, W - 1, 2);
+    step(s, { left: 0, right: 0 }, never);
+  };
+  const pastLeft = (s: PongState) => {
+    s.ball.live = true;
+    aim(s, -BS, -2);
+    step(s, { left: 0, right: 0 }, never);
+  };
+
+  it("loses all upgrades after 3 misses in a row", () => {
+    const s = rally();
+    s.right.upgrades = ["slime", "sizeUp"];
+    pastRight(s);
+    pastRight(s);
+    expect(s.right.upgrades).toHaveLength(2);
+    pastRight(s);
+    expect(s.right.upgrades).toEqual([]);
+  });
+
+  it("resets the streak when the other side misses", () => {
+    const s = rally();
+    s.right.upgrades = ["slime"];
+    pastRight(s);
+    pastRight(s);
+    pastLeft(s);
+    pastRight(s);
+    expect(s.right.upgrades).toEqual(["slime"]);
+  });
+});

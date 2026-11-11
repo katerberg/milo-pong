@@ -42,6 +42,7 @@ Each time an ordinary ball crosses the net for the first time in a rally, it has
 
 - Scoring with an upgrade ball gives the scorer that upgrade instead of a point, until they hold **3**. After that, scoring with an upgrade ball counts as a normal point.
 - Scoring with an ordinary ball is always a normal point.
+- Let the ball get past you **3 times in a row** (without landing one on the other side) and you lose all your upgrades.
 - Upgrades stack, and any mix is allowed. Small balls under each score show what each side holds. Upgrades reset when a new game starts.
 
 | Upgrade        | Effect                                                                                                                                                                                                                                                                                         |

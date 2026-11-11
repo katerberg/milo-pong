@@ -140,12 +140,15 @@ export function createState(rng: Rng): PongState {
   };
 }
 
-export function newGame(state: PongState, twoPlayer: boolean): void {
+/** Upgrades each side begins a game with (normally none; see the debug flags). */
+export type StartingUpgrades = Partial<Record<Side, Upgrade[]>>;
+
+export function newGame(state: PongState, twoPlayer: boolean, start: StartingUpgrades = {}): void {
   state.left.score = 0;
   state.right.score = 0;
-  for (const paddle of [state.left, state.right]) {
-    paddle.upgrades = [];
-    paddle.tilt = 0;
+  for (const side of ["left", "right"] as const) {
+    state[side].upgrades = (start[side] ?? []).slice(0, MAX_UPGRADES);
+    state[side].tilt = 0;
   }
   state.left.y = midY;
   state.right.y = midY;

@@ -52,6 +52,14 @@ Each time an ordinary ball crosses the net for the first time in a rally, it has
 | Slime          | Your paddle turns green and sticky: the ball stays on it until you press Space. The CPU lets go after half a second. Extra slime has no further effect.                       |
 | Turn           | A / D (or ← / →) tilts your paddle 45° either way, and a tilted paddle sends the ball off at 45°. Extra turns have no further effect. The CPU picks a random tilt each rally. |
 
+### Debug: start with upgrades
+
+Add `?upgrades=` to the URL to start every game holding those upgrades, and `?cpuUpgrades=` to do the same for the right side (the CPU or player two). List up to 3 names separated by commas. Use the ids `strengthBoost`, `speedBoost`, `sizeUp`, `slime` and `turn`, or the short names `strength`, `speed` and `size`. Case doesn't matter, and unknown names are ignored. For example:
+
+```
+http://localhost:5173/?upgrades=slime,turn&cpuUpgrades=size,size
+```
+
 The ball art comes from a hand drawing and lives in `src/assets/play`.
 
 ## Win and loss screens

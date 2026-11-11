@@ -6,6 +6,7 @@ import ballStrengthUrl from "../../assets/play/ball-strength.png";
 import ballTurnUrl from "../../assets/play/ball-turn.png";
 import ballUrl from "../../assets/play/ball.png";
 import { sfx } from "../audio/beep";
+import { startingUpgradesFromUrl } from "../sim/debugFlags";
 import type { EndData } from "./EndScene";
 import { makeSketchTextures, NET_KEY, NET_X, paddleTexture } from "./sketch";
 import {
@@ -82,6 +83,8 @@ export class PlayScene extends Phaser.Scene {
   private acc = 0;
   private ending = false;
   private readonly rng = () => Math.random();
+  /** Debug: upgrades to start each game with, from `?upgrades=` / `?cpuUpgrades=`. */
+  private readonly startUpgrades = startingUpgradesFromUrl(location.search);
 
   constructor() {
     super("PlayScene");
@@ -96,7 +99,7 @@ export class PlayScene extends Phaser.Scene {
     this.state = createState(this.rng);
     this.acc = 0;
     this.ending = false;
-    if (data.start) newGame(this.state, data.twoPlayer ?? false);
+    if (data.start) newGame(this.state, data.twoPlayer ?? false, this.startUpgrades);
     this.cameras.main.setZoom(ZOOM).centerOn(W / 2, H / 2);
     makeSketchTextures(this, ZOOM);
     this.add
@@ -133,13 +136,13 @@ export class PlayScene extends Phaser.Scene {
     keyboard.on("keydown-RIGHT", () => (solo() ? (p.leftTurn += 1) : (p.rightTurn += 1)));
     keyboard.on("keydown-ENTER", () => (p.rightRelease = !solo()));
     keyboard.on("keydown-ONE", () => {
-      if (!this.ending) newGame(this.state, false);
+      if (!this.ending) newGame(this.state, false, this.startUpgrades);
     });
     keyboard.on("keydown-TWO", () => {
-      if (!this.ending) newGame(this.state, true);
+      if (!this.ending) newGame(this.state, true, this.startUpgrades);
     });
     keyboard.on("keydown-SPACE", () => {
-      if (this.state.phase === "attract") newGame(this.state, false);
+      if (this.state.phase === "attract") newGame(this.state, false, this.startUpgrades);
       else p.leftRelease = true;
     });
   }

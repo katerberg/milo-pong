@@ -130,7 +130,6 @@ export class StartScene extends Phaser.Scene {
 
   private startGame(): void {
     if (!this.scene.isActive()) return;
-    setHelpVisible(this.game, true);
-    this.scene.start("PlayScene", { start: true });
+    this.scene.start("ModeScene");
   }
 }

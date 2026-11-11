@@ -12,7 +12,8 @@ import {
   segmentOf,
   SERVE_DELAY,
   step,
-  STRENGTH_BOOST,
+  MAX_UPGRADES,
+  STRENGTH_BOOST_STEP,
   TOP_GAP,
   VY,
   W,
@@ -197,7 +198,7 @@ describe("strength boost upgrade", () => {
     expect(events).toContain("upgrade");
     expect(events).not.toContain("score");
     expect(s.left.score).toBe(0);
-    expect(s.left.upgrade).toBe("strengthBoost");
+    expect(s.left.upgrades).toEqual(["strengthBoost"]);
     expect(s.ball.upgrade).toBeNull();
   });
 
@@ -207,23 +208,61 @@ describe("strength boost upgrade", () => {
     aim(s, 1 - BS, -3);
     s.left.y = H - PH;
     expect(step(s, idle, never)).toContain("upgrade");
-    expect(s.right.upgrade).toBe("strengthBoost");
+    expect(s.right.upgrades).toEqual(["strengthBoost"]);
     expect(s.right.score).toBe(0);
   });
 
-  it("counts a point when the scorer already holds an upgrade", () => {
+  it("stacks upgrades instead of points until the scorer holds three", () => {
     const s = rally();
-    s.left.upgrade = "strengthBoost";
+    for (let held = 1; held <= MAX_UPGRADES; held++) {
+      s.ball.live = true;
+      s.ball.upgrade = "strengthBoost";
+      aim(s, W - 1, 3);
+      s.right.y = H - PH;
+      expect(step(s, idle, never)).toContain("upgrade");
+      expect(s.left.upgrades).toHaveLength(held);
+      expect(s.left.score).toBe(0);
+    }
+  });
+
+  it("counts a point for an upgrade ball once the scorer holds three", () => {
+    const s = rally();
+    s.left.upgrades = ["strengthBoost", "strengthBoost", "strengthBoost"];
     s.ball.upgrade = "strengthBoost";
     aim(s, W - 1, 3);
     s.right.y = H - PH;
     expect(step(s, idle, never)).toContain("score");
     expect(s.left.score).toBe(1);
+    expect(s.left.upgrades).toHaveLength(MAX_UPGRADES);
+  });
+
+  it("counts a regular ball as a point even while collecting upgrades", () => {
+    const s = rally();
+    s.left.upgrades = ["strengthBoost"];
+    aim(s, W - 1, 3);
+    s.right.y = H - PH;
+    expect(step(s, idle, never)).toContain("score");
+    expect(s.left.score).toBe(1);
+    expect(s.left.upgrades).toHaveLength(1);
+  });
+
+  it("stacks the strength boost: each one adds a third of the speed", () => {
+    for (const held of [1, 2, 3]) {
+      const s = rally();
+      s.left.upgrades = Array(held).fill("strengthBoost");
+      s.left.y = 20;
+      s.ball.y = s.left.y + 1;
+      s.ball.x = s.left.x + 4;
+      s.ball.vx = -2;
+      s.ball.vy = 0;
+      step(s, idle, never);
+      expect(Math.abs(s.ball.vx)).toBeCloseTo(ballSpeed(s.hits) * (1 + STRENGTH_BOOST_STEP * held));
+    }
   });
 
   it("sends the ball back 33% faster off a boosted paddle, and at normal speed off the other", () => {
     const s = rally();
-    s.left.upgrade = "strengthBoost";
+    s.left.upgrades = ["strengthBoost"];
     s.left.y = 20;
     s.right.y = 20;
     s.ball.y = s.left.y + 1;
@@ -232,7 +271,7 @@ describe("strength boost upgrade", () => {
     s.ball.vy = 0;
     step(s, idle, never);
     const boosted = Math.abs(s.ball.vx);
-    expect(boosted).toBeCloseTo(ballSpeed(s.hits) * STRENGTH_BOOST);
+    expect(boosted).toBeCloseTo(ballSpeed(s.hits) * (1 + STRENGTH_BOOST_STEP));
 
     s.ball.x = s.right.x - BS - 1;
     s.ball.y = s.right.y + 1;
@@ -243,10 +282,10 @@ describe("strength boost upgrade", () => {
 
   it("clears upgrades for a new game", () => {
     const s = rally();
-    s.left.upgrade = "strengthBoost";
-    s.right.upgrade = "strengthBoost";
+    s.left.upgrades = ["strengthBoost", "strengthBoost"];
+    s.right.upgrades = ["strengthBoost"];
     newGame(s, false);
-    expect(s.left.upgrade).toBeNull();
-    expect(s.right.upgrade).toBeNull();
+    expect(s.left.upgrades).toEqual([]);
+    expect(s.right.upgrades).toEqual([]);
   });
 });

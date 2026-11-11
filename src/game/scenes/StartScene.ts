@@ -4,6 +4,7 @@ import dotUrl from "../../assets/start/dot.png";
 import paddleUrl from "../../assets/start/paddle.png";
 import wordUrl from "../../assets/start/word.png";
 import { setHelpVisible } from "../help";
+import { onScreenTap } from "../input/touchControls";
 import { DRAWING, PIECES } from "./startLayout";
 
 export const TITLE_BG = 0x2458bf;
@@ -52,6 +53,8 @@ export class StartScene extends Phaser.Scene {
     keyboard.once("keydown-SPACE", () => this.startGame());
     keyboard.once("keydown-ENTER", () => this.startGame());
     keyboard.once("keydown-C", () => this.showCredits());
+    // A tap anywhere off the Credits box reads as Space.
+    onScreenTap(this, () => this.startGame());
   }
 
   update(_time: number, delta: number): void {

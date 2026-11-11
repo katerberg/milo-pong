@@ -3,6 +3,7 @@ import backUrl from "../../assets/credits/back.png";
 import creditsUrl from "../../assets/credits/credits.png";
 import emmaColorUrl from "../../assets/credits/emma-color.png";
 import emmaUrl from "../../assets/credits/emma.png";
+import { extendBackBar } from "../backBarSides";
 import { setHelpVisible } from "../help";
 
 // Size of the traced lettering (pixels of the cropped photo). The handwritten "Emma" is a
@@ -72,6 +73,12 @@ export class CreditsScene extends Phaser.Scene {
       .setOrigin(0)
       .setInteractive({ useHandCursor: true })
       .once("pointerdown", () => this.toTitle());
+    extendBackBar(this, {
+      barShare: BACK_BAR,
+      fill: "#000000",
+      line: "#ffffff",
+      onClick: () => this.toTitle(),
+    });
 
     const keyboard = this.input.keyboard!;
     keyboard.addCapture("ESC,BACKSPACE");
